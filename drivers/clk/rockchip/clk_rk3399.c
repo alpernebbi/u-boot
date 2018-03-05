@@ -43,6 +43,7 @@ struct pll_div {
 	u32 postdiv1;
 	u32 postdiv2;
 	u32 frac;
+	u32 freq;
 };
 
 #define RATE_TO_DIV(input_rate, output_rate) \
@@ -52,7 +53,7 @@ struct pll_div {
 #define PLL_DIVISORS(hz, _refdiv, _postdiv1, _postdiv2) {\
 	.refdiv = _refdiv,\
 	.fbdiv = (u32)((u64)hz * _refdiv * _postdiv1 * _postdiv2 / OSC_HZ),\
-	.postdiv1 = _postdiv1, .postdiv2 = _postdiv2};
+	.postdiv1 = _postdiv1, .postdiv2 = _postdiv2, .freq = hz};
 
 static const struct pll_div gpll_init_cfg = PLL_DIVISORS(GPLL_HZ, 1, 4, 1);
 static const struct pll_div cpll_init_cfg = PLL_DIVISORS(CPLL_HZ, 1, 3, 1);
@@ -61,16 +62,12 @@ static const struct pll_div npll_init_cfg = PLL_DIVISORS(NPLL_HZ, 1, 3, 1);
 static const struct pll_div ppll_init_cfg = PLL_DIVISORS(PPLL_HZ, 3, 2, 1);
 #endif
 
-static const struct pll_div apll_l_1600_cfg = PLL_DIVISORS(1600 * MHz, 3, 1, 1);
-static const struct pll_div apll_l_600_cfg = PLL_DIVISORS(600 * MHz, 1, 2, 1);
-static const struct pll_div *apll_l_cfgs[] = {
-	[APLL_L_1600_MHZ] = &apll_l_1600_cfg,
-	[APLL_L_600_MHZ] = &apll_l_600_cfg,
-};
+static const struct pll_div apll_1600_cfg = PLL_DIVISORS(1600*MHz, 3, 1, 1);
+static const struct pll_div apll_600_cfg = PLL_DIVISORS(600*MHz, 1, 2, 1);
 
-static const struct pll_div apll_b_600_cfg = PLL_DIVISORS(600 * MHz, 1, 2, 1);
-static const struct pll_div *apll_b_cfgs[] = {
-	[APLL_B_600_MHZ] = &apll_b_600_cfg,
+static const struct pll_div *apll_cfgs[] = {
+	[APLL_1600_MHZ] = &apll_1600_cfg,
+	[APLL_600_MHZ] = &apll_600_cfg,
 };
 
 enum {
@@ -122,41 +119,23 @@ enum {
 	/* PMUCRU_CLKSEL_CON3 */
 	CLK_I2C4_DIV_CON_SHIFT		= 0,
 
-	/* CLKSEL_CON0 */
-	ACLKM_CORE_L_DIV_CON_SHIFT	= 8,
-	ACLKM_CORE_L_DIV_CON_MASK	= 0x1f << ACLKM_CORE_L_DIV_CON_SHIFT,
-	CLK_CORE_L_PLL_SEL_SHIFT	= 6,
-	CLK_CORE_L_PLL_SEL_MASK		= 3 << CLK_CORE_L_PLL_SEL_SHIFT,
-	CLK_CORE_L_PLL_SEL_ALPLL	= 0x0,
-	CLK_CORE_L_PLL_SEL_ABPLL	= 0x1,
-	CLK_CORE_L_PLL_SEL_DPLL		= 0x10,
-	CLK_CORE_L_PLL_SEL_GPLL		= 0x11,
-	CLK_CORE_L_DIV_MASK		= 0x1f,
-	CLK_CORE_L_DIV_SHIFT		= 0,
+	/* CLKSEL_CON0 / CLKSEL_CON2 */
+	ACLKM_CORE_DIV_CON_SHIFT	= 8,
+	ACLKM_CORE_DIV_CON_MASK		= 0x1f << ACLKM_CORE_DIV_CON_SHIFT,
+	CLK_CORE_PLL_SEL_SHIFT		= 6,
+	CLK_CORE_PLL_SEL_MASK		= 3 << CLK_CORE_PLL_SEL_SHIFT,
+	CLK_CORE_PLL_SEL_ALPLL		= 0x0,
+	CLK_CORE_PLL_SEL_ABPLL		= 0x1,
+	CLK_CORE_PLL_SEL_DPLL		= 0x10,
+	CLK_CORE_PLL_SEL_GPLL		= 0x11,
+	CLK_CORE_DIV_SHIFT		= 0,
+	CLK_CORE_DIV_MASK		= 0x1f << CLK_CORE_DIV_SHIFT,
 
-	/* CLKSEL_CON1 */
-	PCLK_DBG_L_DIV_SHIFT		= 0x8,
-	PCLK_DBG_L_DIV_MASK		= 0x1f << PCLK_DBG_L_DIV_SHIFT,
-	ATCLK_CORE_L_DIV_SHIFT		= 0,
-	ATCLK_CORE_L_DIV_MASK		= 0x1f << ATCLK_CORE_L_DIV_SHIFT,
-
-	/* CLKSEL_CON2 */
-	ACLKM_CORE_B_DIV_CON_SHIFT	= 8,
-	ACLKM_CORE_B_DIV_CON_MASK	= 0x1f << ACLKM_CORE_B_DIV_CON_SHIFT,
-	CLK_CORE_B_PLL_SEL_SHIFT	= 6,
-	CLK_CORE_B_PLL_SEL_MASK		= 3 << CLK_CORE_B_PLL_SEL_SHIFT,
-	CLK_CORE_B_PLL_SEL_ALPLL	= 0x0,
-	CLK_CORE_B_PLL_SEL_ABPLL	= 0x1,
-	CLK_CORE_B_PLL_SEL_DPLL		= 0x10,
-	CLK_CORE_B_PLL_SEL_GPLL		= 0x11,
-	CLK_CORE_B_DIV_MASK		= 0x1f,
-	CLK_CORE_B_DIV_SHIFT		= 0,
-
-	/* CLKSEL_CON3 */
-	PCLK_DBG_B_DIV_SHIFT		= 0x8,
-	PCLK_DBG_B_DIV_MASK		= 0x1f << PCLK_DBG_B_DIV_SHIFT,
-	ATCLK_CORE_B_DIV_SHIFT		= 0,
-	ATCLK_CORE_B_DIV_MASK		= 0x1f << ATCLK_CORE_B_DIV_SHIFT,
+	/* CLKSEL_CON1 / CLKSEL_CON3 */
+	PCLK_DBG_DIV_SHIFT		= 0x8,
+	PCLK_DBG_DIV_MASK		= 0x1f << PCLK_DBG_DIV_SHIFT,
+	ATCLK_CORE_DIV_SHIFT		= 0,
+	ATCLK_CORE_DIV_MASK		= 0x1f << ATCLK_CORE_DIV_SHIFT,
 
 	/* CLKSEL_CON14 */
 	PCLK_PERIHP_DIV_CON_SHIFT	= 12,
@@ -429,74 +408,56 @@ static int pll_para_config(u32 freq_hz, struct pll_div *div)
 	return 0;
 }
 
-void rk3399_configure_cpu_l(struct rockchip_cru *cru,
-			    enum apll_l_frequencies apll_l_freq)
+void rk3399_configure_cpu(struct rockchip_cru *cru,
+			  enum apll_frequencies freq,
+			  enum cpu_cluster cluster)
 {
 	u32 aclkm_div;
 	u32 pclk_dbg_div;
-	u32 atclk_div;
+	u32 atclk_div, apll_hz;
+	int con_base, parent;
+	u32 *pll_con;
 
-	/* Setup cluster L */
-	rkclk_set_pll(&cru->apll_l_con[0], apll_l_cfgs[apll_l_freq]);
+	switch (cluster) {
+	case CPU_CLUSTER_LITTLE:
+		con_base = 0;
+		parent = CLK_CORE_PLL_SEL_ALPLL;
+		pll_con = &cru->apll_l_con[0];
+		break;
+	case CPU_CLUSTER_BIG:
+	default:
+		con_base = 2;
+		parent = CLK_CORE_PLL_SEL_ABPLL;
+		pll_con = &cru->apll_b_con[0];
+		break;
+	}
 
-	aclkm_div = LPLL_HZ / ACLKM_CORE_L_HZ - 1;
-	assert((aclkm_div + 1) * ACLKM_CORE_L_HZ == LPLL_HZ &&
+	apll_hz = apll_cfgs[freq]->freq;
+	rkclk_set_pll(pll_con, apll_cfgs[freq]);
+
+	aclkm_div = apll_hz / ACLKM_CORE_HZ - 1;
+	assert((aclkm_div + 1) * ACLKM_CORE_HZ == apll_hz &&
 	       aclkm_div <= 0x1f);
 
-	pclk_dbg_div = LPLL_HZ / PCLK_DBG_L_HZ - 1;
-	assert((pclk_dbg_div + 1) * PCLK_DBG_L_HZ == LPLL_HZ &&
+	pclk_dbg_div = apll_hz / PCLK_DBG_HZ - 1;
+	assert((pclk_dbg_div + 1) * PCLK_DBG_HZ == apll_hz &&
 	       pclk_dbg_div <= 0x1f);
 
-	atclk_div = LPLL_HZ / ATCLK_CORE_L_HZ - 1;
-	assert((atclk_div + 1) * ATCLK_CORE_L_HZ == LPLL_HZ &&
+	atclk_div = apll_hz / ATCLK_CORE_HZ - 1;
+	assert((atclk_div + 1) * ATCLK_CORE_HZ == apll_hz &&
 	       atclk_div <= 0x1f);
 
-	rk_clrsetreg(&cru->clksel_con[0],
-		     ACLKM_CORE_L_DIV_CON_MASK | CLK_CORE_L_PLL_SEL_MASK |
-		     CLK_CORE_L_DIV_MASK,
-		     aclkm_div << ACLKM_CORE_L_DIV_CON_SHIFT |
-		     CLK_CORE_L_PLL_SEL_ALPLL << CLK_CORE_L_PLL_SEL_SHIFT |
-		     0 << CLK_CORE_L_DIV_SHIFT);
+	rk_clrsetreg(&cru->clksel_con[con_base],
+		     ACLKM_CORE_DIV_CON_MASK | CLK_CORE_PLL_SEL_MASK |
+		     CLK_CORE_DIV_MASK,
+		     aclkm_div << ACLKM_CORE_DIV_CON_SHIFT |
+		     parent << CLK_CORE_PLL_SEL_SHIFT |
+		     0 << CLK_CORE_DIV_SHIFT);
 
-	rk_clrsetreg(&cru->clksel_con[1],
-		     PCLK_DBG_L_DIV_MASK | ATCLK_CORE_L_DIV_MASK,
-		     pclk_dbg_div << PCLK_DBG_L_DIV_SHIFT |
-		     atclk_div << ATCLK_CORE_L_DIV_SHIFT);
-}
-
-void rk3399_configure_cpu_b(struct rockchip_cru *cru,
-			    enum apll_b_frequencies apll_b_freq)
-{
-	u32 aclkm_div;
-	u32 pclk_dbg_div;
-	u32 atclk_div;
-
-	/* Setup cluster B */
-	rkclk_set_pll(&cru->apll_b_con[0], apll_b_cfgs[apll_b_freq]);
-
-	aclkm_div = BPLL_HZ / ACLKM_CORE_B_HZ - 1;
-	assert((aclkm_div + 1) * ACLKM_CORE_B_HZ == BPLL_HZ &&
-	       aclkm_div <= 0x1f);
-
-	pclk_dbg_div = BPLL_HZ / PCLK_DBG_B_HZ - 1;
-	assert((pclk_dbg_div + 1) * PCLK_DBG_B_HZ == BPLL_HZ &&
-	       pclk_dbg_div <= 0x1f);
-
-	atclk_div = BPLL_HZ / ATCLK_CORE_B_HZ - 1;
-	assert((atclk_div + 1) * ATCLK_CORE_B_HZ == BPLL_HZ &&
-	       atclk_div <= 0x1f);
-
-	rk_clrsetreg(&cru->clksel_con[2],
-		     ACLKM_CORE_B_DIV_CON_MASK | CLK_CORE_B_PLL_SEL_MASK |
-		     CLK_CORE_B_DIV_MASK,
-		     aclkm_div << ACLKM_CORE_B_DIV_CON_SHIFT |
-		     CLK_CORE_B_PLL_SEL_ABPLL << CLK_CORE_B_PLL_SEL_SHIFT |
-		     0 << CLK_CORE_B_DIV_SHIFT);
-
-	rk_clrsetreg(&cru->clksel_con[3],
-		     PCLK_DBG_B_DIV_MASK | ATCLK_CORE_B_DIV_MASK,
-		     pclk_dbg_div << PCLK_DBG_B_DIV_SHIFT |
-		     atclk_div << ATCLK_CORE_B_DIV_SHIFT);
+	rk_clrsetreg(&cru->clksel_con[con_base + 1],
+		     PCLK_DBG_DIV_MASK | ATCLK_CORE_DIV_MASK,
+		     pclk_dbg_div << PCLK_DBG_DIV_SHIFT |
+		     atclk_div << ATCLK_CORE_DIV_SHIFT);
 }
 
 #define I2C_CLK_REG_MASK(bus) \
@@ -1302,8 +1263,9 @@ static void rkclk_init(struct rockchip_cru *cru)
 	u32 hclk_div;
 	u32 pclk_div;
 
-	rk3399_configure_cpu_l(cru, APLL_L_600_MHZ);
-	rk3399_configure_cpu_b(cru, APLL_B_600_MHZ);
+	rk3399_configure_cpu(cru, APLL_600_MHZ, CPU_CLUSTER_LITTLE);
+	rk3399_configure_cpu(cru, APLL_600_MHZ, CPU_CLUSTER_BIG);
+
 	/*
 	 * some cru registers changed by bootrom, we'd better reset them to
 	 * reset/default values described in TRM to avoid confusion in kernel.
