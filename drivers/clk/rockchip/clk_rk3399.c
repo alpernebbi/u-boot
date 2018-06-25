@@ -303,6 +303,31 @@ enum {
  * FBDIV = Integer value programmed into feedback divide
  *
  */
+
+static uint32_t rkclk_pll_get_rate(u32 *pll_con)
+{
+	u32 refdiv, fbdiv, postdiv1, postdiv2;
+	u32 con;
+
+	con = readl(&pll_con[3]);
+	switch ((con & PLL_MODE_MASK) >> PLL_MODE_SHIFT) {
+	case PLL_MODE_SLOW:
+		return OSC_HZ;
+	case PLL_MODE_NORM:
+		/* normal mode */
+		con = readl(&pll_con[0]);
+		fbdiv = (con & PLL_FBDIV_MASK) >> PLL_FBDIV_SHIFT;
+		con = readl(&pll_con[1]);
+		postdiv1 = (con & PLL_POSTDIV1_MASK) >> PLL_POSTDIV1_SHIFT;
+		postdiv2 = (con & PLL_POSTDIV2_MASK) >> PLL_POSTDIV2_SHIFT;
+		refdiv = (con & PLL_REFDIV_MASK) >> PLL_REFDIV_SHIFT;
+		return (24 * fbdiv / (refdiv * postdiv1 * postdiv2)) * 1000000;
+	case PLL_MODE_DEEP:
+	default:
+		return 32768;
+	}
+}
+
 static void rkclk_set_pll(u32 *pll_con, const struct pll_div *div)
 {
 	/* All 8 PLLs have same VCO and output frequency range restrictions. */
@@ -344,6 +369,42 @@ static void rkclk_set_pll(u32 *pll_con, const struct pll_div *div)
 	/* pll enter normal mode */
 	rk_clrsetreg(&pll_con[3], PLL_MODE_MASK,
 		     PLL_MODE_NORM << PLL_MODE_SHIFT);
+}
+
+static ulong rk3399_pll_get_rate(struct rk3399_clk_priv *priv,
+				 ulong clk_id)
+{
+	struct rockchip_cru *cru = priv->cru;
+	u32 *pll_con;
+
+	switch (clk_id) {
+	case PLL_APLLL:
+		pll_con = &cru->apll_l_con[0];
+		break;
+	case PLL_APLLB:
+		pll_con = &cru->apll_b_con[0];
+		break;
+	case PLL_DPLL:
+		pll_con = &cru->dpll_con[0];
+		break;
+	case PLL_CPLL:
+		pll_con = &cru->cpll_con[0];
+		break;
+	case PLL_GPLL:
+		pll_con = &cru->gpll_con[0];
+		break;
+	case PLL_NPLL:
+		pll_con = &cru->npll_con[0];
+		break;
+	case PLL_VPLL:
+		pll_con = &cru->vpll_con[0];
+		break;
+	default:
+		pr_err("%s: PLL clk-id %ld not supported\n", __func__, clk_id);
+		return -EINVAL;
+	}
+
+	return rkclk_pll_get_rate(pll_con);
 }
 
 static int pll_para_config(u32 freq_hz, struct pll_div *div)
@@ -942,8 +1003,15 @@ static ulong rk3399_clk_get_rate(struct clk *clk)
 	ulong rate = 0;
 
 	switch (clk->id) {
-	case 0 ... 63:
-		return 0;
+	case PLL_APLLL:
+	case PLL_APLLB:
+	case PLL_DPLL:
+	case PLL_CPLL:
+	case PLL_GPLL:
+	case PLL_NPLL:
+	case PLL_VPLL:
+		rate = rk3399_pll_get_rate(priv, clk->id);
+		break;
 	case HCLK_SDMMC:
 	case SCLK_SDMMC:
 	case SCLK_EMMC:
