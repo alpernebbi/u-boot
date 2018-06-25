@@ -204,6 +204,7 @@ enum {
 	ACLK_VOP_PLL_SEL_SHIFT		= 6,
 	ACLK_VOP_PLL_SEL_MASK		= 0x3 << ACLK_VOP_PLL_SEL_SHIFT,
 	ACLK_VOP_PLL_SEL_CPLL		= 0x1,
+	ACLK_VOP_PLL_SEL_GPLL		= 0x2,
 	ACLK_VOP_DIV_CON_SHIFT		= 0,
 	ACLK_VOP_DIV_CON_MASK		= 0x1f << ACLK_VOP_DIV_CON_SHIFT,
 
@@ -214,6 +215,7 @@ enum {
 	DCLK_VOP_PLL_SEL_SHIFT          = 8,
 	DCLK_VOP_PLL_SEL_MASK           = 3 << DCLK_VOP_PLL_SEL_SHIFT,
 	DCLK_VOP_PLL_SEL_VPLL           = 0,
+	DCLK_VOP_PLL_SEL_CPLL           = 1,
 	DCLK_VOP_DIV_CON_MASK           = 0xff,
 	DCLK_VOP_DIV_CON_SHIFT          = 0,
 
@@ -705,10 +707,10 @@ static ulong rk3399_spi_set_clk(struct rockchip_cru *cru, ulong clk_id, uint hz)
 
 static ulong rk3399_vop_set_clk(struct rockchip_cru *cru, ulong clk_id, u32 hz)
 {
-	struct pll_div vpll_config = {0};
+	struct pll_div vpll_config = {0}, cpll_config = {0};
 	int aclk_vop = 200 * MHz;
 	void *aclkreg_addr, *dclkreg_addr;
-	u32 div;
+	u32 div = 1;
 
 	switch (clk_id) {
 	case DCLK_VOP0:
@@ -723,25 +725,27 @@ static ulong rk3399_vop_set_clk(struct rockchip_cru *cru, ulong clk_id, u32 hz)
 		return -EINVAL;
 	}
 	/* vop aclk source clk: cpll */
-	div = CPLL_HZ / aclk_vop;
+	div = GPLL_HZ / aclk_vop;
 	assert(div - 1 <= 31);
 
 	rk_clrsetreg(aclkreg_addr,
 		     ACLK_VOP_PLL_SEL_MASK | ACLK_VOP_DIV_CON_MASK,
-		     ACLK_VOP_PLL_SEL_CPLL << ACLK_VOP_PLL_SEL_SHIFT |
+		     ACLK_VOP_PLL_SEL_GPLL << ACLK_VOP_PLL_SEL_SHIFT |
 		     (div - 1) << ACLK_VOP_DIV_CON_SHIFT);
 
-	/* vop dclk source from vpll, and equals to vpll(means div == 1) */
-	if (pll_para_config(hz, &vpll_config))
-		return -1;
-
-	rkclk_set_pll(&cru->vpll_con[0], &vpll_config);
+	if (readl(dclkreg_addr) & DCLK_VOP_PLL_SEL_MASK) {
+		if (pll_para_config(hz, &cpll_config))
+			return -1;
+		rkclk_set_pll(&cru->cpll_con[0], &cpll_config);
+	} else {
+		if (pll_para_config(hz, &vpll_config))
+			return -1;
+		rkclk_set_pll(&cru->vpll_con[0], &vpll_config);
+	}
 
 	rk_clrsetreg(dclkreg_addr,
-		     DCLK_VOP_DCLK_SEL_MASK | DCLK_VOP_PLL_SEL_MASK |
-		     DCLK_VOP_DIV_CON_MASK,
+		     DCLK_VOP_DCLK_SEL_MASK | DCLK_VOP_DIV_CON_MASK,
 		     DCLK_VOP_DCLK_SEL_DIVOUT << DCLK_VOP_DCLK_SEL_SHIFT |
-		     DCLK_VOP_PLL_SEL_VPLL << DCLK_VOP_PLL_SEL_SHIFT |
 		     (1 - 1) << DCLK_VOP_DIV_CON_SHIFT);
 
 	return hz;
@@ -1192,12 +1196,42 @@ static int __maybe_unused rk3399_gmac_set_parent(struct clk *clk,
 	return -EINVAL;
 }
 
+static int __maybe_unused rk3399_dclk_vop_set_parent(struct clk *clk,
+						     struct clk *parent)
+{
+	struct rk3399_clk_priv *priv = dev_get_priv(clk->dev);
+	void *dclkreg_addr;
+
+	switch (clk->id) {
+	case DCLK_VOP0_DIV:
+		dclkreg_addr = &priv->cru->clksel_con[49];
+		break;
+	case DCLK_VOP1_DIV:
+		dclkreg_addr = &priv->cru->clksel_con[50];
+		break;
+	default:
+		return -EINVAL;
+	}
+	if (parent->id == PLL_CPLL) {
+		rk_clrsetreg(dclkreg_addr, DCLK_VOP_PLL_SEL_MASK,
+			     DCLK_VOP_PLL_SEL_CPLL << DCLK_VOP_PLL_SEL_SHIFT);
+	} else {
+		rk_clrsetreg(dclkreg_addr, DCLK_VOP_PLL_SEL_MASK,
+			     DCLK_VOP_PLL_SEL_VPLL << DCLK_VOP_PLL_SEL_SHIFT);
+	}
+
+	return 0;
+}
+
 static int __maybe_unused rk3399_clk_set_parent(struct clk *clk,
 						struct clk *parent)
 {
 	switch (clk->id) {
 	case SCLK_RMII_SRC:
 		return rk3399_gmac_set_parent(clk, parent);
+	case DCLK_VOP0_DIV:
+	case DCLK_VOP1_DIV:
+		return rk3399_dclk_vop_set_parent(clk, parent);
 	}
 
 	debug("%s: unsupported clk %ld\n", __func__, clk->id);
