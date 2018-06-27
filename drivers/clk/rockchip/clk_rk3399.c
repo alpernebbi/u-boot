@@ -1231,12 +1231,16 @@ static int rk3399_clk_enable(struct clk *clk)
 	case HCLK_HOST0_ARB:
 		rk_clrreg(&priv->cru->clksel_con[20], BIT(6));
 		break;
+	case SCLK_USBPHY0_480M_SRC:
+		return 0;
 	case HCLK_HOST1:
 		rk_clrreg(&priv->cru->clksel_con[20], BIT(7));
 		break;
 	case HCLK_HOST1_ARB:
 		rk_clrreg(&priv->cru->clksel_con[20], BIT(8));
 		break;
+	case SCLK_USBPHY1_480M_SRC:
+		return 0;
 	case SCLK_UPHY0_TCPDPHY_REF:
 		rk_clrreg(&priv->cru->clkgate_con[13], BIT(4));
 		break;
