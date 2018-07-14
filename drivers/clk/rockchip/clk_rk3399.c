@@ -700,7 +700,6 @@ static ulong rk3399_spi_set_clk(struct rockchip_cru *cru, ulong clk_id, uint hz)
 	return rk3399_spi_get_clk(cru, clk_id);
 }
 
-#define RK3399_LIMIT_PLL_DCLK_VOP	(600 * 1000000)
 #define RK3399_LIMIT_PLL_ACLK_VOP	(400 * 1000000)
 
 static ulong rk3399_vop_set_clk(struct rockchip_cru *cru, ulong clk_id, u32 hz)
@@ -731,14 +730,12 @@ static ulong rk3399_vop_set_clk(struct rockchip_cru *cru, ulong clk_id, u32 hz)
 		     ACLK_VOP_PLL_SEL_GPLL << ACLK_VOP_PLL_SEL_SHIFT |
 		     (div - 1) << ACLK_VOP_DIV_CON_SHIFT);
 
-	div = DIV_ROUND_UP(RK3399_LIMIT_PLL_DCLK_VOP, hz);
-
 	if (readl(dclkreg_addr) & DCLK_VOP_PLL_SEL_MASK) {
-		if (pll_para_config(div * hz, &cpll_config))
+		if (pll_para_config(hz, &cpll_config))
 			return -1;
 		rkclk_set_pll(&cru->cpll_con[0], &cpll_config);
 	} else {
-		if (pll_para_config(div * hz, &vpll_config))
+		if (pll_para_config(hz, &vpll_config))
 			return -1;
 		rkclk_set_pll(&cru->vpll_con[0], &vpll_config);
 	}
@@ -746,7 +743,7 @@ static ulong rk3399_vop_set_clk(struct rockchip_cru *cru, ulong clk_id, u32 hz)
 	rk_clrsetreg(dclkreg_addr,
 		     DCLK_VOP_DCLK_SEL_MASK | DCLK_VOP_DIV_CON_MASK,
 		     DCLK_VOP_DCLK_SEL_DIVOUT << DCLK_VOP_DCLK_SEL_SHIFT |
-		     (div - 1) << DCLK_VOP_DIV_CON_SHIFT);
+		     (1 - 1) << DCLK_VOP_DIV_CON_SHIFT);
 
 	return hz;
 }
