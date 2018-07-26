@@ -56,13 +56,13 @@ struct pll_div {
 
 static const struct pll_div gpll_init_cfg = PLL_DIVISORS(GPLL_HZ, 1, 4, 1);
 static const struct pll_div cpll_init_cfg = PLL_DIVISORS(CPLL_HZ, 1, 3, 1);
+static const struct pll_div npll_init_cfg = PLL_DIVISORS(NPLL_HZ, 1, 3, 1);
 #if !defined(CONFIG_SPL_BUILD)
 static const struct pll_div ppll_init_cfg = PLL_DIVISORS(PPLL_HZ, 3, 2, 1);
 #endif
 
 static const struct pll_div apll_l_1600_cfg = PLL_DIVISORS(1600 * MHz, 3, 1, 1);
 static const struct pll_div apll_l_600_cfg = PLL_DIVISORS(600 * MHz, 1, 2, 1);
-
 static const struct pll_div *apll_l_cfgs[] = {
 	[APLL_L_1600_MHZ] = &apll_l_1600_cfg,
 	[APLL_L_600_MHZ] = &apll_l_600_cfg,
@@ -1316,9 +1316,10 @@ static void rkclk_init(struct rockchip_cru *cru)
 	/* configure gpll cpll */
 	rkclk_set_pll(&cru->gpll_con[0], &gpll_init_cfg);
 	rkclk_set_pll(&cru->cpll_con[0], &cpll_init_cfg);
+	rkclk_set_pll(&cru->npll_con[0], &npll_init_cfg);
 
 	/* configure perihp aclk, hclk, pclk */
-	aclk_div = GPLL_HZ / PERIHP_ACLK_HZ - 1;
+	aclk_div = DIV_ROUND_UP(GPLL_HZ, PERIHP_ACLK_HZ) - 1;
 	assert((aclk_div + 1) * PERIHP_ACLK_HZ == GPLL_HZ && aclk_div < 0x1f);
 
 	hclk_div = PERIHP_ACLK_HZ / PERIHP_HCLK_HZ - 1;
@@ -1338,7 +1339,7 @@ static void rkclk_init(struct rockchip_cru *cru)
 		     aclk_div << ACLK_PERIHP_DIV_CON_SHIFT);
 
 	/* configure perilp0 aclk, hclk, pclk */
-	aclk_div = GPLL_HZ / PERILP0_ACLK_HZ - 1;
+	aclk_div = DIV_ROUND_UP(GPLL_HZ, PERILP0_ACLK_HZ) - 1;
 	assert((aclk_div + 1) * PERILP0_ACLK_HZ == GPLL_HZ && aclk_div < 0x1f);
 
 	hclk_div = PERILP0_ACLK_HZ / PERILP0_HCLK_HZ - 1;
@@ -1358,7 +1359,7 @@ static void rkclk_init(struct rockchip_cru *cru)
 		     aclk_div << ACLK_PERILP0_DIV_CON_SHIFT);
 
 	/* perilp1 hclk select gpll as source */
-	hclk_div = GPLL_HZ / PERILP1_HCLK_HZ - 1;
+	hclk_div = DIV_ROUND_UP(GPLL_HZ, PERILP1_HCLK_HZ) - 1;
 	assert((hclk_div + 1) * PERILP1_HCLK_HZ ==
 	       GPLL_HZ && (hclk_div < 0x1f));
 
