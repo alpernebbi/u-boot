@@ -831,12 +831,20 @@ static ulong rk3399_mmc_set_clk(struct rockchip_cru *cru,
 
 		/* Select clk_emmc source from GPLL too */
 		src_clk_div = DIV_ROUND_UP(GPLL_HZ, set_rate);
-		assert(src_clk_div - 1 <= 127);
-
-		rk_clrsetreg(&cru->clksel_con[22],
-			     CLK_EMMC_PLL_MASK | CLK_EMMC_DIV_CON_MASK,
-			     CLK_EMMC_PLL_SEL_GPLL << CLK_EMMC_PLL_SHIFT |
-			     (src_clk_div - 1) << CLK_EMMC_DIV_CON_SHIFT);
+		if (src_clk_div > 128) {
+			/* use 24MHz source for 400KHz clock */
+			src_clk_div = DIV_ROUND_UP(OSC_HZ, set_rate);
+			assert(src_clk_div - 1 <= 127);
+			rk_clrsetreg(&cru->clksel_con[22],
+				     CLK_EMMC_PLL_MASK | CLK_EMMC_DIV_CON_MASK,
+				     CLK_EMMC_PLL_SEL_24M << CLK_EMMC_PLL_SHIFT |
+				     (src_clk_div - 1) << CLK_EMMC_DIV_CON_SHIFT);
+		} else {
+			rk_clrsetreg(&cru->clksel_con[22],
+				     CLK_EMMC_PLL_MASK | CLK_EMMC_DIV_CON_MASK,
+				     CLK_EMMC_PLL_SEL_GPLL << CLK_EMMC_PLL_SHIFT |
+				     (src_clk_div - 1) << CLK_EMMC_DIV_CON_SHIFT);
+		}
 		break;
 	default:
 		return -EINVAL;
