@@ -1644,6 +1644,12 @@ static void rkclk_init(struct rockchip_cru *cru)
 		     pclk_div << PCLK_PERILP1_DIV_CON_SHIFT |
 		     hclk_div << HCLK_PERILP1_DIV_CON_SHIFT |
 		     HCLK_PERILP1_PLL_SEL_GPLL << HCLK_PERILP1_PLL_SEL_SHIFT);
+
+	rk_clrsetreg(&cru->clksel_con[21],
+		     ACLK_EMMC_PLL_SEL_MASK | ACLK_EMMC_DIV_CON_MASK,
+		     ACLK_EMMC_PLL_SEL_GPLL << ACLK_EMMC_PLL_SEL_SHIFT |
+		     (4 - 1) << ACLK_EMMC_DIV_CON_SHIFT);
+	rk_clrsetreg(&cru->clksel_con[22], 0x3f << 0, 7 << 0);
 }
 
 static int rk3399_clk_probe(struct udevice *dev)
