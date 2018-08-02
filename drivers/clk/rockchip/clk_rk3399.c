@@ -1386,6 +1386,12 @@ static void rkclk_init(struct rockchip_cru *cru)
 	 * reset/default values described in TRM to avoid confusion in kernel.
 	 * Please consider these three lines as a fix of bootrom bug.
 	 */
+	if (rkclk_pll_get_rate(&cru->npll_con[0]) != NPLL_HZ)
+		rkclk_set_pll(&cru->npll_con[0], &npll_init_cfg);
+
+	if (rkclk_pll_get_rate(&cru->gpll_con[0]) == GPLL_HZ)
+		return;
+
 	rk_clrsetreg(&cru->clksel_con[12], 0xffff, 0x4101);
 	rk_clrsetreg(&cru->clksel_con[19], 0xffff, 0x033f);
 	rk_clrsetreg(&cru->clksel_con[56], 0x0003, 0x0003);
@@ -1446,8 +1452,13 @@ static void rkclk_init(struct rockchip_cru *cru)
 		     hclk_div << HCLK_PERILP1_DIV_CON_SHIFT |
 		     HCLK_PERILP1_PLL_SEL_GPLL << HCLK_PERILP1_PLL_SEL_SHIFT);
 
+	rk_clrsetreg(&cru->clksel_con[21],
+		     ACLK_EMMC_PLL_SEL_MASK | ACLK_EMMC_DIV_CON_MASK,
+		     ACLK_EMMC_PLL_SEL_GPLL << ACLK_EMMC_PLL_SEL_SHIFT |
+		     (4 - 1) << ACLK_EMMC_DIV_CON_SHIFT);
+	rk_clrsetreg(&cru->clksel_con[22], 0x3f << 0, 7 << 0);
+
 	rkclk_set_pll(&cru->gpll_con[0], &gpll_init_cfg);
-	rkclk_set_pll(&cru->npll_con[0], &npll_init_cfg);
 }
 
 static int rk3399_clk_probe(struct udevice *dev)
