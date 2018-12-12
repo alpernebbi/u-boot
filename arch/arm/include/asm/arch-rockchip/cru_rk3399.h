@@ -92,6 +92,7 @@ check_member(rockchip_cru, sdio1_con[1], 0x594);
 
 enum apll_frequencies {
 	APLL_1600_MHZ,
+	APLL_816_MHZ,
 	APLL_600_MHZ,
 };
 

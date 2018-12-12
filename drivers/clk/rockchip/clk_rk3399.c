@@ -63,10 +63,12 @@ static const struct pll_div ppll_init_cfg = PLL_DIVISORS(PPLL_HZ, 3, 2, 1);
 #endif
 
 static const struct pll_div apll_1600_cfg = PLL_DIVISORS(1600*MHz, 3, 1, 1);
+static const struct pll_div apll_816_cfg = PLL_DIVISORS(816*MHz, 1, 2, 1);
 static const struct pll_div apll_600_cfg = PLL_DIVISORS(600*MHz, 1, 2, 1);
 
 static const struct pll_div *apll_cfgs[] = {
 	[APLL_1600_MHZ] = &apll_1600_cfg,
+	[APLL_816_MHZ] = &apll_816_cfg,
 	[APLL_600_MHZ] = &apll_600_cfg,
 };
 
@@ -1263,8 +1265,8 @@ static void rkclk_init(struct rockchip_cru *cru)
 	u32 hclk_div;
 	u32 pclk_div;
 
-	rk3399_configure_cpu(cru, APLL_600_MHZ, CPU_CLUSTER_LITTLE);
-	rk3399_configure_cpu(cru, APLL_600_MHZ, CPU_CLUSTER_BIG);
+	rk3399_configure_cpu(cru, APLL_816_MHZ, CPU_CLUSTER_LITTLE);
+	rk3399_configure_cpu(cru, APLL_816_MHZ, CPU_CLUSTER_BIG);
 
 	/*
 	 * some cru registers changed by bootrom, we'd better reset them to
