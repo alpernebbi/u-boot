@@ -873,6 +873,69 @@ static ulong rk3399_saradc_set_clk(struct rockchip_cru *cru, uint hz)
 	return rk3399_saradc_get_clk(cru);
 }
 
+#ifndef CONFIG_SPL_BUILD
+static ulong rk3399_peri_get_clk(struct rk3399_clk_priv *priv, ulong clk_id)
+{
+	struct rockchip_cru *cru = priv->cru;
+	u32 div, con, parent;
+
+	switch (clk_id) {
+	case ACLK_PERIHP:
+		con = readl(&cru->clksel_con[14]);
+		div = (con & ACLK_PERIHP_DIV_CON_MASK) >>
+		      ACLK_PERIHP_DIV_CON_SHIFT;
+		parent = GPLL_HZ;
+		break;
+	case PCLK_PERIHP:
+		con = readl(&cru->clksel_con[14]);
+		div = (con & PCLK_PERIHP_DIV_CON_MASK) >>
+		      PCLK_PERIHP_DIV_CON_SHIFT;
+		parent = rk3399_peri_get_clk(priv, ACLK_PERIHP);
+		break;
+	case HCLK_PERIHP:
+		con = readl(&cru->clksel_con[14]);
+		div = (con & HCLK_PERIHP_DIV_CON_MASK) >>
+		      HCLK_PERIHP_DIV_CON_SHIFT;
+		parent = rk3399_peri_get_clk(priv, ACLK_PERIHP);
+		break;
+	case ACLK_PERILP0:
+		con = readl(&cru->clksel_con[23]);
+		div = (con & ACLK_PERILP0_DIV_CON_MASK) >>
+		      ACLK_PERILP0_DIV_CON_SHIFT;
+		parent = GPLL_HZ;
+		break;
+	case HCLK_PERILP0:
+		con = readl(&cru->clksel_con[23]);
+		div = (con & HCLK_PERILP0_DIV_CON_MASK) >>
+		      HCLK_PERILP0_DIV_CON_SHIFT;
+		parent = rk3399_peri_get_clk(priv, ACLK_PERILP0);
+		break;
+	case PCLK_PERILP0:
+		con = readl(&cru->clksel_con[23]);
+		div = (con & PCLK_PERILP0_DIV_CON_MASK) >>
+		      PCLK_PERILP0_DIV_CON_SHIFT;
+		parent = rk3399_peri_get_clk(priv, ACLK_PERILP0);
+		break;
+	case HCLK_PERILP1:
+		con = readl(&cru->clksel_con[25]);
+		div = (con & HCLK_PERILP1_DIV_CON_MASK) >>
+		      HCLK_PERILP1_DIV_CON_SHIFT;
+		parent = GPLL_HZ;
+		break;
+	case PCLK_PERILP1:
+		con = readl(&cru->clksel_con[25]);
+		div = (con & PCLK_PERILP1_DIV_CON_MASK) >>
+		      PCLK_PERILP1_DIV_CON_SHIFT;
+		parent = rk3399_peri_get_clk(priv, HCLK_PERILP1);
+		break;
+	default:
+		return -ENOENT;
+	}
+
+	return DIV_TO_RATE(parent, div);
+}
+#endif
+
 static ulong rk3399_clk_get_rate(struct clk *clk)
 {
 	struct rk3399_clk_priv *priv = dev_get_priv(clk->dev);
@@ -912,6 +975,18 @@ static ulong rk3399_clk_get_rate(struct clk *clk)
 	case SCLK_SARADC:
 		rate = rk3399_saradc_get_clk(priv->cru);
 		break;
+#ifndef CONFIG_SPL_BUILD
+	case ACLK_PERIHP:
+	case HCLK_PERIHP:
+	case PCLK_PERIHP:
+	case ACLK_PERILP0:
+	case HCLK_PERILP0:
+	case PCLK_PERILP0:
+	case HCLK_PERILP1:
+	case PCLK_PERILP1:
+		rate = rk3399_peri_get_clk(priv, clk->id);
+		break;
+#endif
 	case ACLK_VIO:
 	case ACLK_HDCP:
 	case ACLK_GIC_PRE:
