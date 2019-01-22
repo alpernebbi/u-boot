@@ -9,6 +9,14 @@
 /* Private data for the clock driver - used by rockchip_get_cru() */
 struct rk3399_clk_priv {
 	struct rockchip_cru *cru;
+	ulong armlclk_hz;
+	ulong armlclk_enter_hz;
+	ulong armlclk_init_hz;
+	ulong armbclk_hz;
+	ulong armbclk_enter_hz;
+	ulong armbclk_init_hz;
+	bool sync_kernel;
+	bool set_armclk_rate;
 };
 
 struct rk3399_pmuclk_priv {
