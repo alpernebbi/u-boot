@@ -118,7 +118,7 @@ void board_debug_uart_init(void)
 #define GPIO0_BASE	0xff720000
 #define PMUGRF_BASE	0xff320000
 	struct rk3399_grf_regs * const grf = (void *)GRF_BASE;
-#ifdef CONFIG_TARGET_CHROMEBOOK_BOB
+#if defined(CONFIG_TARGET_CHROMEBOOK_BOB) || defined(CONFIG_TARGET_CHROMEBOOK_KEVIN)
 	struct rk3399_pmugrf_regs * const pmugrf = (void *)PMUGRF_BASE;
 	struct rockchip_gpio_regs * const gpio = (void *)GPIO0_BASE;
 #endif
@@ -140,7 +140,7 @@ void board_debug_uart_init(void)
 		     GRF_GPIO3B7_SEL_MASK,
 		     GRF_UART3_SOUT << GRF_GPIO3B7_SEL_SHIFT);
 #else
-# ifdef CONFIG_TARGET_CHROMEBOOK_BOB
+# if defined(CONFIG_TARGET_CHROMEBOOK_BOB) || defined(CONFIG_TARGET_CHROMEBOOK_KEVIN)
 	rk_setreg(&grf->io_vsel, 1 << 0);
 
 	/*
