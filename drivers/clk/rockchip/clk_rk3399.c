@@ -1650,6 +1650,19 @@ static void rkclk_init(struct rockchip_cru *cru)
 		     ACLK_EMMC_PLL_SEL_GPLL << ACLK_EMMC_PLL_SEL_SHIFT |
 		     (4 - 1) << ACLK_EMMC_DIV_CON_SHIFT);
 	rk_clrsetreg(&cru->clksel_con[22], 0x3f << 0, 7 << 0);
+
+	rk_clrsetreg(&cru->clksel_con[61], I2C_CLK_REG_MASK(1),
+		     I2C_CLK_REG_VALUE(1, 4));
+	rk_clrsetreg(&cru->clksel_con[62], I2C_CLK_REG_MASK(2),
+		     I2C_CLK_REG_VALUE(2, 4));
+	rk_clrsetreg(&cru->clksel_con[63], I2C_CLK_REG_MASK(3),
+		     I2C_CLK_REG_VALUE(3, 4));
+	rk_clrsetreg(&cru->clksel_con[61], I2C_CLK_REG_MASK(5),
+		     I2C_CLK_REG_VALUE(5, 4));
+	rk_clrsetreg(&cru->clksel_con[62], I2C_CLK_REG_MASK(6),
+		     I2C_CLK_REG_VALUE(6, 4));
+	rk_clrsetreg(&cru->clksel_con[63], I2C_CLK_REG_MASK(7),
+		     I2C_CLK_REG_VALUE(7, 4));
 }
 
 static int rk3399_clk_probe(struct udevice *dev)
