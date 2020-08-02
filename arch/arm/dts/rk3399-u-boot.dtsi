@@ -64,7 +64,7 @@
 &binman {
 	rom {
 		filename = "u-boot.rom";
-		size = <0x400000>;
+		size = <0x800000>;
 		pad-byte = <0xff>;
 
 		mkimage {
