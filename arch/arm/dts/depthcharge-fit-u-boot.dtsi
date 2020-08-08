@@ -1,0 +1,132 @@
+// SPDX-License-Identifier: GPL-2.0+
+// Copyright (c) Alper Nebi Yasak <alpernebiyasak@gmail.com>
+
+#include <config.h>
+
+#if IS_ENABLED(CONFIG_DEPTHCHARGE_PARTITION_IMAGE)
+/*
+ * Depthcharge loads the "vmlinuz" from our image to a fixed memory
+ * region. In some cases we need to precisely align the u-boot.bin
+ * within the FIT image so that depthcharge will end up putting it
+ * exactly where we want it, i.e at SYS_TEXT_BASE or at a 4K aligned
+ * address. To do that we need to know how many non-padding bytes there
+ * are before u-boot.bin starts in the FIT image, which we keep track of
+ * by this FIT_HEADER_SIZE definition.
+ */
+#define FIT_HEADER_SIZE 0xCC
+
+#define IN_DEPTHCHARGE_RANGE(n) \
+	((n > CONFIG_SYS_DEPTHCHARGE_KERNEL_START + FIT_HEADER_SIZE) && \
+	 (CONFIG_SYS_DEPTHCHARGE_KERNEL_START + CONFIG_SYS_DEPTHCHARGE_KERNEL_SIZE > n))
+
+#if IS_ENABLED(CONFIG_ARM64)
+/*
+ * On 64-bit ARM depthcharge copies the selected "kernel" image outside
+ * this area to a dynamically chosen address before jumping to it, we
+ * don't need to align it inside the FIT.
+ */
+
+#elif IN_DEPTHCHARGE_RANGE(CONFIG_SYS_TEXT_BASE)
+/*
+ * On 32-bit ARM the selected "kernel" image is run exactly where it is.
+ * If SYS_TEXT_BASE is somewhere in the Depthcharge kernel range we can
+ * place U-Boot precisely there and it will work fine.
+ */
+#define FIT_PAD_TO (CONFIG_SYS_TEXT_BASE - CONFIG_SYS_DEPTHCHARGE_KERNEL_START)
+#define FIT_PADDING (FIT_PAD_TO - FIT_HEADER_SIZE)
+
+#elif IS_ENABLED(CONFIG_POSITION_INDEPENDENT)
+/*
+ * The Kconfig description for POSITION_INDEPENDENT says U-Boot can be
+ * "loaded to and executed from almost any 4K aligned address". This
+ * looks like it's an ARM64 restriction, but let's align to 4K anyway
+ * until someone tests if it works on 32-bit ARM without this alignment.
+ */
+#define FIT_ALIGN_TO 0x1000
+#define FIT_PAD_TO \
+	((FIT_HEADER_SIZE + FIT_ALIGN_TO - 1) & ~(FIT_ALIGN_TO - 1))
+#define FIT_PADDING (FIT_PAD_TO - FIT_HEADER_SIZE)
+
+#else
+/*
+ * If U-Boot is not position-independent and can't run from inside the
+ * Depthcharge kernel memory range there's nothing we can do about it.
+ */
+#warning Depthcharge kernel partition image is non-functional.
+
+#endif
+
+/*
+ * If you make any changes to the FIT image definition below, you'll
+ * probably need to update the FIT_HEADER_SIZE above as well.
+ *
+ * The correct value can be empirically found by defining FIT_PADDING as
+ * zero here, building the image, and inspecting the generated FIT image
+ * to see where u-boot.bin begins in it (e.g with hexdump).
+ */
+&binman {
+	depthcharge-kpart {
+		filename = "u-boot-depthcharge.kpart";
+
+		depthcharge-kernel {
+			keydir = "doc/chromium/files/devkeys";
+			keyblock = "kernel.keyblock";
+			signprivate = "kernel_data_key.vbprivk";
+			version = <1>;
+			preamble-flags = <0>;
+			arch = "arm";
+
+			vmlinuz {
+				fit {
+					description = "U-Boot for chainloading from depthcharge";
+
+					images {
+						#ifdef FIT_PADDING
+						padding {
+							fill {
+								size = <(FIT_PADDING)>;
+							};
+						};
+						#endif
+
+						kernel-1 {
+							description = "U-Boot binary";
+							type = "kernel";
+							arch = "arm";
+							os = "linux";
+							compression = "none";
+							load = <CONFIG_SYS_TEXT_BASE>;
+							entry = <CONFIG_SYS_TEXT_BASE>;
+
+							u-boot {
+							};
+						};
+
+						fdt-1 {
+							description = "U-Boot device tree";
+							type = "flat_dt";
+							arch = "arm";
+							os = "linux";
+							compression = "none";
+
+							u-boot-dtb {
+							};
+						};
+					};
+
+					configurations {
+						default = "conf-1";
+						conf-1 {
+							description = "U-Boot";
+							kernel = "kernel-1";
+							fdt = "fdt-1";
+							loadables = "kernel-1";
+						};
+					};
+				};
+			};
+		};
+	};
+};
+
+#endif /* CONFIG_DEPTHCHARGE_PARTITION_IMAGE */
