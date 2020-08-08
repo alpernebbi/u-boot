@@ -1,0 +1,34 @@
+// SPDX-License-Identifier: GPL-2.0+
+
+/dts-v1/;
+
+/ {
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	binman {
+		depthcharge-kernel {
+			keyblock = "kernel.keyblock";
+			signprivate = "kernel_data_key.vbprivk";
+			version = <1>;
+			preamble-flags = <0>;
+			arch = "arm";
+
+			vmlinuz {
+				u-boot {
+				};
+			};
+
+			config {
+				text {
+					text-label = "cmdline";
+				};
+			};
+
+			bootloader {
+				u-boot-spl {
+				};
+			};
+		};
+	};
+};
