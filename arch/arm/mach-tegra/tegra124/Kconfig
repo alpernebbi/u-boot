@@ -33,6 +33,7 @@ config TARGET_CEI_TK1_SOM
 config TARGET_NYAN_BIG
 	bool "Google/NVIDIA Nyan-big Chromebook"
 	select BOARD_LATE_INIT
+	select HAS_DEPTHCHARGE
 	help
 	  Nyan Big is a Tegra124 clamshell board that is very similar
 	  to venice2, but it has a different panel, the sdcard CD and WP
