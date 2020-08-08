@@ -7487,6 +7487,72 @@ fdt         fdtmap                Extract the devicetree blob from the fdtmap
             err,
             "Image '.*' is missing external blobs and is non-functional: .*")
 
+    def _HandleVbutilKernelCommand(self, pipe_list):
+        """Fake calls to the futility utility
+
+        The expected pipe is:
+
+            [('futility', 'vbutil_kernel',
+              '--pack', 'depthcharge-kernel.kpart',
+              '--keyblock', 'devkeys/kernel.keyblock',
+              '--signprivate', 'devkeys/kernel_data_key.vbprivk',
+              '--version', '1',
+              '--vmlinuz', 'depthcharge-kernel.vmlinuz',
+              '--bootloader', 'depthcharge-kernel.bootloader',
+              '--config', 'depthcharge-kernel.config',
+              '--arch', 'arm')]
+
+        This writes to the output file (here, 'depthcharge-kernel.kpart')
+        VBLOCK_DATA and input files at some offsets based on actual
+        results of the above command.
+        """
+        if pipe_list[0][0] == 'futility':
+            fname = pipe_list[0][3]
+            with open(fname, 'wb') as fd:
+                vmlinuz = pipe_list[0][11]
+                bootloader = pipe_list[0][13]
+                config = pipe_list[0][15]
+
+                fd.write(VBLOCK_DATA)
+
+                fd.seek(0x10000)
+                with open(vmlinuz, 'rb') as in_fd:
+                    fd.write(in_fd.read())
+
+                pos = tools.align(fd.tell(), 0x1000)
+                fd.seek(pos)
+                with open(config, 'rb') as in_fd:
+                    fd.write(in_fd.read()[:0xfff])
+
+                fd.seek(pos + 0x2000)
+                with open(bootloader, 'rb') as in_fd:
+                    fd.write(in_fd.read())
+
+                fd.truncate(tools.align(fd.tell(), 0x1000))
+
+            return command.CommandResult()
+
+    def testDepthchargeKernel(self):
+        """Test generating a Depthcharge kernel partition image"""
+        self._SetupSplElf()
+        command.test_result = self._HandleVbutilKernelCommand
+        entry_args = {
+            'keydir': 'devkeys',
+            'cmdline': TEXT_DATA,
+        }
+        data = self._DoReadFileDtb(
+            '327_depthcharge_kernel.dts', entry_args=entry_args)[0]
+        expected = (
+            VBLOCK_DATA +
+            tools.get_bytes(0, 0x10000 - len(VBLOCK_DATA)) +
+            U_BOOT_DATA +
+            tools.get_bytes(0, 0x1000 - len(U_BOOT_DATA)) +
+            tools.to_bytes(TEXT_DATA) +
+            tools.get_bytes(0, 0x2000 - len(TEXT_DATA)) +
+            U_BOOT_SPL_DATA +
+            tools.get_bytes(0, 0x1000 - len(U_BOOT_SPL_DATA))
+        )
+        self.assertEqual(expected, data)
 
 if __name__ == "__main__":
     unittest.main()
