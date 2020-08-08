@@ -7,7 +7,7 @@
 #endif
 
 / {
-	binman {
+	binman: binman {
 		multiple-images;
 		image1 {
 			filename = "u-boot-tegra.bin";

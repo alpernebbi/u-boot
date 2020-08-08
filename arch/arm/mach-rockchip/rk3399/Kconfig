@@ -7,6 +7,7 @@ config TARGET_CHROMEBOOK_BOB
 	bool "Asus Flip C101PA Chromebook (RK3399)"
 	select HAS_ROM
 	select ROCKCHIP_SPI_IMAGE
+	select HAS_DEPTHCHARGE
 	help
 	  Bob is a small RK3299-based device similar in apperance to Minnie.
 	  It has two USB 3.0 type-C ports, 4GB of SDRAM, WiFi and a 10.1",
@@ -18,6 +19,7 @@ config TARGET_CHROMEBOOK_KEVIN
 	bool "Samsung Chromebook Plus (RK3399)"
 	select HAS_ROM
 	select ROCKCHIP_SPI_IMAGE
+	select HAS_DEPTHCHARGE
 	help
 	  Kevin is a RK3399-based convertible chromebook. It has two USB 3.0
 	  Type-C ports, 4GB of SDRAM, WiFi and a 12.3" 2400x1600 display. It

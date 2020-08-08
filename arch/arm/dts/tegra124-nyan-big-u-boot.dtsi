@@ -5,6 +5,7 @@
  */
 
 #include "tegra-u-boot.dtsi"
+#include "depthcharge-u-boot.dtsi"
 
 / {
 	host1x@50000000 {
