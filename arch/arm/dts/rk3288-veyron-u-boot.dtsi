@@ -4,6 +4,7 @@
  */
 
 #include "rk3288-u-boot.dtsi"
+#include "depthcharge-u-boot.dtsi"
 
 / {
 	chosen {

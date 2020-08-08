@@ -151,6 +151,7 @@ config TARGET_SNOW
 	select EXYNOS5250
 	select OF_CONTROL
 	select SUPPORT_SPL
+	select HAS_DEPTHCHARGE
 
 config TARGET_SPRING
 	bool "Spring board"
@@ -158,6 +159,7 @@ config TARGET_SPRING
 	select EXYNOS5250
 	select OF_CONTROL
 	select SUPPORT_SPL
+	select HAS_DEPTHCHARGE
 
 config TARGET_SMDK5420
 	bool "SMDK5420 board"
@@ -172,6 +174,7 @@ config TARGET_PEACH_PI
 	select EXYNOS5420
 	select OF_CONTROL
 	select SUPPORT_SPL
+	select HAS_DEPTHCHARGE
 
 config TARGET_PEACH_PIT
 	bool "Peach Pit board"
@@ -179,6 +182,7 @@ config TARGET_PEACH_PIT
 	select EXYNOS5420
 	select OF_CONTROL
 	select SUPPORT_SPL
+	select HAS_DEPTHCHARGE
 
 endchoice
 endif
