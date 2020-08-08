@@ -113,11 +113,13 @@ config TARGET_SNOW
 	bool "Snow board"
 	select OF_CONTROL
 	select SUPPORT_SPL
+	select HAS_DEPTHCHARGE
 
 config TARGET_SPRING
 	bool "Spring board"
 	select OF_CONTROL
 	select SUPPORT_SPL
+	select HAS_DEPTHCHARGE
 
 config TARGET_SMDK5420
 	bool "SMDK5420 board"
@@ -128,11 +130,13 @@ config TARGET_PEACH_PI
 	bool "Peach Pi board"
 	select OF_CONTROL
 	select SUPPORT_SPL
+	select HAS_DEPTHCHARGE
 
 config TARGET_PEACH_PIT
 	bool "Peach Pit board"
 	select OF_CONTROL
 	select SUPPORT_SPL
+	select HAS_DEPTHCHARGE
 
 endchoice
 endif
