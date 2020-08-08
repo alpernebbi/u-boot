@@ -145,6 +145,49 @@ class Bintoolfutility(bintool.Bintool):
             ]
         return self.run_cmd(*args)
 
+    def pack_kernel(self, kpart, keyblock, signprivate, version,
+                    vmlinuz, bootloader, config, arch,
+                    kloadaddr=None, pad=None, vblockonly=False, flags=None):
+        """Pack files to create a signed kernel partition image
+
+        Args:
+            kpart (str): Filename to write the kernel partition image to
+            keyblock (str): Filename of keyblock file
+            signprivate (str): Filename of private key
+            version (int): Version number
+            vmlinuz (str): Filename of kernel binary to pack
+            bootloader (str): Filename of bootloader stub to pack
+            config (str): Filename of config file to pack
+            arch (str): Cpu architecture (x86, amd64, arm, aarch64, mips)
+            kloadaddr (int): RAM address to load the kernel body (optional)
+            pad (int): Vblock padding size (optional)
+            vblockonly (bool): Output only the vblock blob (optional)
+            flags (int): Preamble flags (optional)
+
+        Returns:
+            str: Tool output
+        """
+        args = [
+            'vbutil_kernel',
+            '--pack', kpart,
+            '--keyblock', keyblock,
+            '--signprivate', signprivate,
+            '--version', f'{version}',
+            '--vmlinuz', vmlinuz,
+            '--bootloader', bootloader,
+            '--config', config,
+            '--arch', arch,
+            ]
+        if kloadaddr is not None:
+            args += ['--kloadaddr', f'{kloadaddr}']
+        if pad is not None:
+            args += ['--pad', f'{pad}']
+        if vblockonly:
+            args += ['--vblockonly']
+        if flags is not None:
+            args += ['--flags', f'{flags}']
+        return self.run_cmd(*args)
+
     def fetch(self, method):
         """Fetch handler for futility
 
