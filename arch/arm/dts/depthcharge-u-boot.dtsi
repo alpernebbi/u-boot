@@ -1,0 +1,62 @@
+// SPDX-License-Identifier: GPL-2.0+
+
+#include <config.h>
+
+#if IS_ENABLED(CONFIG_DEPTHCHARGE_PARTITION_IMAGE)
+&binman {
+	depthcharge-kpart {
+		filename = "u-boot-depthcharge.kpart";
+
+		depthcharge-kernel {
+			keydir = "doc/chromium/files/devkeys";
+			keyblock = "kernel.keyblock";
+			signprivate = "kernel_data_key.vbprivk";
+			version = <1>;
+			preamble-flags = <0>;
+			arch = "arm";
+
+			vmlinuz {
+				fit {
+					description = "U-Boot for chainloading from depthcharge";
+
+					images {
+						kernel-1 {
+							description = "U-Boot binary";
+							type = "kernel_noload";
+							arch = "arm";
+							os = "linux";
+							compression = "none";
+							load = <CONFIG_TEXT_BASE>;
+							entry = <CONFIG_TEXT_BASE>;
+
+							u-boot {
+							};
+						};
+
+						fdt-1 {
+							description = "U-Boot device tree";
+							type = "flat_dt";
+							arch = "arm";
+							os = "linux";
+							compression = "none";
+
+							u-boot-dtb {
+							};
+						};
+					};
+
+					configurations {
+						default = "conf-1";
+						conf-1 {
+							description = "U-Boot";
+							kernel = "kernel-1";
+							fdt = "fdt-1";
+							loadables = "kernel-1";
+						};
+					};
+				};
+			};
+		};
+	};
+};
+#endif /* CONFIG_DEPTHCHARGE_PARTITION_IMAGE */
