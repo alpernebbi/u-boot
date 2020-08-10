@@ -29,6 +29,134 @@ You can obtain the vbutil_kernel utility here:
    https://drive.google.com/open?id=0B7WYZbZ9zd-3dHlVVXo4VXE2T0U
 
 
+Binman-generated partition images
+=================================
+
+Binman generates partition images ("u-boot-depthcharge.kpart") that should
+make the Chrome OS bootloader chainload into U-Boot for the following
+boards:
+
+- chromebook_bob
+- chromebook_kevin
+- chromebook_speedy
+- chromebook_minnie
+- chromebook_jerry
+- chromebit_mickey
+- nyan-big
+- snow
+- spring
+- peach-pi
+- peach-pit
+
+This partition image will be available as u-boot-depthcharge.kpart if the
+build configuration satisfies some conditions specific to the firmware. For
+the above boards, the defconfig should already satisfy them.
+
+
+Using u-boot-depthcharge.kpart
+------------------------------
+
+The firmware on these boards chooses its payload based on the "Chrome OS
+Kernel" type GPT partitions. You can prepare an SD card on another machine::
+
+   DISK=/dev/sdc   # Replace with your actual SD card device
+   sudo cgpt create $DISK
+   sudo cgpt add -b 34 -s 32768 -P 1 -S 1 -t kernel $DISK
+   sudo cgpt add -b 32802 -s 2000000 -t rootfs $DISK
+   sudo gdisk $DISK   # Enter command 'w' to write a protective MBR to the disk
+
+And write the partition image to the partition::
+
+   sudo dd if=u-boot-depthcharge.kpart of=${DISK}1; sync
+
+Reboot the target board in dev mode, into ChromeOS. Make sure that you have USB
+booting enabled by logging in as root (via Ctrl-Alt-forward_arrow) and typing
+'enable_dev_usb_boot'. You only need to do this once.
+
+Reboot the board again with the SD card inserted. Press Ctrl-U at the developer
+mode screen. It should show U-Boot related messages on the display.
+
+
+Enabling more boards
+---------------------
+
+First, find out the code name, board name and the base board of your
+machine. There are several ways to do this, but most comprehensive resource
+here is the ChromeOS docs:
+
+https://www.chromium.org/chromium-os/developer-information-for-chrome-os-devices
+
+Then find your firmware version by either pressing TAB in the developer mode
+warning screen, or running "sudo crosssystem fwid".
+
+For example, for a Samsung Chromebook Plus, we have::
+
+    Code name: Kevin
+    Board name: Kevin
+    Base board: Gru
+    fwid: Google_Kevin.8785.B
+    device-tree: rk3399-gru-kevin.dtb
+
+You need to figure out the proper KERNEL_START and KERNEL_SIZE values for your
+machine. Search the firmware's source code repository for a firmware-* branch
+that matches your machine's code name (or board name) and firmware version:
+
+https://chromium.googlesource.com/chromiumos/platform/depthcharge/+refs
+
+Here are example values for boards already in U-Boot::
+
+    Board             | Branch (firmware-*)     | KERNEL_START | KERNEL_SIZE
+    ------------------+-------------------------+--------------+-------------
+    chromebook_bob    | gru-8785.B              | 0x15000000   | 0x02000000
+    chromebook_kevin  |  "                      |  "           |  "
+    chromebook_speedy | veyron-6588.B           | 0x02000000   | 0x01000000
+    chromebook_minnie |  "                      |  "           |  "
+    chromebook_jerry  |  "                      |  "           |  "
+    chromebit_mickey  |  "                      |  "           |  "
+    nyan-big          | nyan-5771.B             | 0x81000000   | 0x01000000
+
+Within the repository tree, find the defconfig file for your machine in the
+board directory (e.g "board/kevin/defconfig" in "firmware-gru.8785.B") which
+should have KERNEL_START and maybe KERNEL_SIZE. If not, check the Kconfig files
+(currently src/image/Kconfig) for the defaults.
+
+Then, modify the device tree and defconfig to enable generating the images:
+- Add these values as CONFIG_SYS_DEPTHCHARGE_KERNEL_{START,SIZE}
+- Set CONFIG_DEPTHCHARGE_PARTITION_IMAGE=y
+- Set SYS_TEXT_BASE to somewhere after KERNEL_START, but within KERNEL_SIZE
+  bytes of it (typically KERNEL_START + 0x100)
+- Include "depthcharge-fit-u-boot.dtsi" in your board's device-tree file
+
+After that, you should hopefully get a working image on your next U-Boot build.
+
+
+Empirically deducing/verifying KERNEL_START
+-------------------------------------------
+
+If you can boot Linux on your board, put an initrd in the FIT image you build,
+and check the /sys/firmware/chosen/linux,initrd-start file. Find the offset of
+the initrd in the FIT image, then subtract it from that value, and you should
+get KERNEL_START.
+
+::
+
+    $ hd /sys/firmware/devicetree/base/chosen/linux,initrd-start
+    00000000  15 8f 31 14                                       |..1.|
+    00000004
+    # gives you 0x158f3114
+
+    $ hd initrd.img | head -1
+    00000000  1f 8b 08 00 00 00 00 00  00 03 cc 5c 5b 6c 2c c9  |...........\[l,.|
+
+    $ hd depthcharge.fit | grep -A1 "1f 8b 08 00"         # or something like this
+    008f3110  00 00 00 2a 1f 8b 08 00  00 00 00 00 00 03 cc 5c  |...*...........\|
+    008f3120  5b 6c 2c c9 59 1e 29 4a  76 67 36 bb 49 f6 02 42  |[l,.Y.)Jvg6.I..B
+    # gives you 0x008f3114, so: KERNEL_START = 0x158f3114 - 0x008f3114 = 0x15000000
+
+
+Device-specific notes and building images manually
+==================================================
+
 Snow (Samsung ARM Chromebook)
 -----------------------------
 
