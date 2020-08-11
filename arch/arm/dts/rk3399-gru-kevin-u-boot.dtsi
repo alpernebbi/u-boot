@@ -5,3 +5,7 @@
 
 #include "rk3399-gru-u-boot.dtsi"
 #include "rk3399-sdram-lpddr3-samsung-4GB-1866.dtsi"
+
+&edp {
+	rockchip,panel = <&edp_panel>;
+};
