@@ -62,7 +62,7 @@ class Entry_fit(Entry):
         """
         super().__init__(section, etype, node)
         self._fit = None
-        self._fit_content = defaultdict(list)
+        self._fit_images = {}
         self._fit_props = {}
 
     def ReadNode(self):
@@ -91,15 +91,18 @@ class Entry_fit(Entry):
 
             rel_path = node.path[len(base_node.path):]
             has_images = depth == 2 and rel_path.startswith('/images/')
+            if has_images:
+                entry = Entry.Create(self.section, node, etype='section')
+                entry.ReadNode()
+                self._fit_images[rel_path] = entry
+
             for subnode in node.subnodes:
                 if has_images and not (subnode.name.startswith('hash') or
                                        subnode.name.startswith('signature')):
                     # This is a content node. We collect all of these together
                     # and put them in the 'data' property. They do not appear
                     # in the FIT.
-                    entry = Entry.Create(self.section, subnode)
-                    entry.ReadNode()
-                    self._fit_content[rel_path].append(entry)
+                    pass
                 else:
                     with fsw.add_node(subnode.name):
                         _AddNode(base_node, depth + 1, subnode)
@@ -150,13 +153,12 @@ class Entry_fit(Entry):
         Returns:
             New fdt contents (bytes)
         """
-        for path, entries in self._fit_content.items():
+        for path, image in self._fit_images.items():
             node = fdt.GetNode(path)
-            data = b''
-            for entry in entries:
-                if not entry.ObtainContents():
-                    return False
-                data += entry.GetData()
+            if not image.ObtainContents():
+                return False
+            image.Pack(0)
+            data = image.GetData()
             node.AddData('data', data)
 
         fdt.Sync(auto_resize=True)
