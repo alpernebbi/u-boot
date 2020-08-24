@@ -1269,6 +1269,14 @@ class TestFunctional(unittest.TestCase):
                     U_BOOT_DATA + tools.GetBytes(ord('&'), 4))
         self.assertEqual(expected, data)
 
+    def testPadInSections(self):
+        """Test pad-before, pad-after for entries in sections"""
+        data = self._DoReadFile('165_pad_in_sections.dts')
+        expected = (U_BOOT_DATA + tools.GetBytes(ord('!'), 12) +
+                    U_BOOT_DATA + tools.GetBytes(ord('!'), 6) +
+                    U_BOOT_DATA)
+        self.assertEqual(expected, data)
+
     def testMap(self):
         """Tests outputting a map of the images"""
         _, _, map_data, _ = self._DoReadFileDtb('055_sections.dts', map=True)
