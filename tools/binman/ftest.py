@@ -3489,6 +3489,29 @@ class TestFunctional(unittest.TestCase):
         expected = (U_BOOT_DATA + tools.GetBytes(ord('!'), 12) +
                     U_BOOT_DATA + tools.GetBytes(ord('!'), 6) +
                     U_BOOT_DATA)
+
+    def testFitImageSubentryAlignment(self):
+        """Test relative alignability of FIT image subentries"""
+        entry_args = {
+            'test-id': TEXT_DATA,
+        }
+        data, _, _, _ = self._DoReadFileDtb('167_fit_image_subentry_alignment.dts',
+                                            entry_args=entry_args)
+        dtb = fdt.Fdt.FromData(data)
+        dtb.Scan()
+
+        node = dtb.GetNode('/images/kernel')
+        data = dtb.GetProps(node)["data"].bytes
+        align_pad = 0x10 - (len(U_BOOT_SPL_DATA) % 0x10)
+        expected = (tools.GetBytes(0, 0x20) + U_BOOT_SPL_DATA +
+                    tools.GetBytes(0, align_pad) + U_BOOT_DATA)
+        self.assertEqual(expected, data)
+
+        node = dtb.GetNode('/images/fdt-1')
+        data = dtb.GetProps(node)["data"].bytes
+        expected = (U_BOOT_SPL_DTB_DATA + tools.GetBytes(0, 20) +
+                    tools.ToBytes(TEXT_DATA) + tools.GetBytes(0, 30) +
+                    U_BOOT_DTB_DATA)
         self.assertEqual(expected, data)
 
 if __name__ == "__main__":
