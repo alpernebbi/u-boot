@@ -1540,31 +1540,38 @@ class Builder:
     def _PrepareThread(self, thread_num, setup_git):
         """Prepare the working directory for a thread.
 
-        This clones or fetches the repo into the thread's work directory.
+        This adds a git worktree for the repo into the thread's work
+        directory or fetches the repo into a clone that might already
+        exist there.
 
         Args:
             thread_num: Thread number (0, 1, ...)
-            setup_git: True to set up a git repo clone
+            setup_git: True to set up a git worktree
         """
         thread_dir = self.GetThreadDir(thread_num)
         builderthread.Mkdir(thread_dir)
         git_dir = os.path.join(thread_dir, '.git')
 
-        # Clone the repo if it doesn't already exist
-        # TODO(sjg@chromium): Perhaps some git hackery to symlink instead, so
-        # we have a private index but uses the origin repo's contents?
+        # Create a worktree for this thread if it (or a git repo clone)
+        # doesn't already exist
         if setup_git and self.git_dir:
             src_dir = os.path.abspath(self.git_dir)
-            if os.path.exists(git_dir):
+            if not os.path.exists(git_dir):
+                Print('\rChecking out worktree for thread %d' % thread_num,
+                      newline=False)
+                gitutil.AddWorktree(src_dir, thread_dir)
+                terminal.PrintClear()
+            elif os.path.isdir(git_dir):
+                # Older versions cloned the src_dir repo, we can keep using
+                # the clones but need to fetch from src_dir.
                 Print('\rFetching repo for thread %d' % thread_num,
                       newline=False)
                 gitutil.Fetch(git_dir, thread_dir)
                 terminal.PrintClear()
-            else:
-                Print('\rCloning repo for thread %d' % thread_num,
-                      newline=False)
-                gitutil.Clone(src_dir, thread_dir)
-                terminal.PrintClear()
+            elif os.path.isfile(git_dir):
+                # This is a worktree of the src_dir repo, we don't need to
+                # create it again.
+                pass
 
     def _PrepareWorkingSpace(self, max_threads, setup_git):
         """Prepare the working directory for use.
@@ -1573,9 +1580,14 @@ class Builder:
 
         Args:
             max_threads: Maximum number of threads we expect to need.
-            setup_git: True to set up a git repo clone
+            setup_git: True to set up a git worktree
         """
         builderthread.Mkdir(self._working_dir)
+        if setup_git and self.git_dir:
+            # If we previously added a worktree but the directory for it
+            # got deleted, we need to prune its files from the repo so
+            # that we can check out another in its place.
+            gitutil.PruneWorktrees(os.path.abspath(self.git_dir))
         for thread in range(max_threads):
             self._PrepareThread(thread, setup_git)
 
