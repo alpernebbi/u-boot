@@ -57,7 +57,8 @@ static void rk3399_set_pin_polarity(struct udevice *dev,
  * device tree somehow.
  */
 static const char * const rk3399_regulator_names[] = {
-	"vcc33_lcd"
+	"vcc33_lcd",
+	"pp3300_disp",
 };
 
 static int rk3399_vop_probe(struct udevice *dev)
