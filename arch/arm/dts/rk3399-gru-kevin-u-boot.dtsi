@@ -9,3 +9,7 @@
 &edp {
 	rockchip,panel = <&edp_panel>;
 };
+
+&rng {
+	status = "okay";
+};
