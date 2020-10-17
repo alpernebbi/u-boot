@@ -1013,7 +1013,6 @@ static ulong rk3399_tsadc_set_clk(struct rockchip_cru *cru, uint hz)
 	return rk3399_tsadc_get_clk(cru);
 }
 
-#ifndef CONFIG_SPL_BUILD
 static ulong rk3399_crypto_get_clk(struct rk3399_clk_priv *priv, ulong clk_id)
 {
 	struct rockchip_cru *cru = priv->cru;
@@ -1071,6 +1070,7 @@ static ulong rk3399_crypto_set_clk(struct rk3399_clk_priv *priv, ulong clk_id,
 	return rk3399_crypto_get_clk(priv, clk_id);
 }
 
+#ifndef CONFIG_SPL_BUILD
 static ulong rk3399_peri_get_clk(struct rk3399_clk_priv *priv, ulong clk_id)
 {
 	struct rockchip_cru *cru = priv->cru;
@@ -1183,11 +1183,11 @@ static ulong rk3399_clk_get_rate(struct clk *clk)
 	case SCLK_TSADC:
 		rate = rk3399_tsadc_get_clk(priv->cru);
 		break;
-#ifndef CONFIG_SPL_BUILD
 	case SCLK_CRYPTO0:
 	case SCLK_CRYPTO1:
 		rate = rk3399_crypto_get_clk(priv, clk->id);
 		break;
+#ifndef CONFIG_SPL_BUILD
 	case ACLK_PERIHP:
 	case HCLK_PERIHP:
 	case PCLK_PERIHP:
@@ -1290,12 +1290,10 @@ static ulong rk3399_clk_set_rate(struct clk *clk, ulong rate)
 	case SCLK_TSADC:
 		ret = rk3399_tsadc_set_clk(priv->cru, rate);
 		break;
-#ifndef CONFIG_SPL_BUILD
 	case SCLK_CRYPTO0:
 	case SCLK_CRYPTO1:
 		ret = rk3399_crypto_set_clk(priv, clk->id, rate);
 		break;
-#endif
 	case ACLK_VIO:
 	case ACLK_HDCP:
 	case ACLK_GIC_PRE:
