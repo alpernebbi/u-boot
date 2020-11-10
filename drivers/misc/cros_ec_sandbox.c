@@ -460,6 +460,14 @@ static int process_cmd(struct ec_state *ec,
 	case EC_CMD_ENTERING_MODE:
 		len = 0;
 		break;
+	case EC_CMD_GET_NEXT_EVENT: {
+		struct ec_response_get_next_event *resp = resp_data;
+
+		resp->event_type = EC_MKBP_EVENT_KEY_MATRIX;
+		cros_ec_keyscan(ec, resp->data.key_matrix);
+		len = sizeof(*resp);
+		break;
+	}
 	default:
 		printf("   ** Unknown EC command %#02x\n", req_hdr->command);
 		return -1;
