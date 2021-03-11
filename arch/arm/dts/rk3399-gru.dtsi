@@ -552,10 +552,12 @@ ap_i2c_audio: &i2c8 {
 
 &spi5 {
 	status = "okay";
+	spi-deactivate-delay = <200>;
 
 	cros_ec: ec@0 {
 		compatible = "google,cros-ec-spi";
 		reg = <0>;
+                ec-interrupt = <&gpio0 RK_PA1 GPIO_ACTIVE_LOW>;
 		interrupt-parent = <&gpio0>;
 		interrupts = <1 IRQ_TYPE_LEVEL_LOW>;
 		pinctrl-names = "default";
