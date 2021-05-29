@@ -12,6 +12,7 @@ import signal
 import sys
 import time
 import re
+from subprocess import call, check_call, check_output, CalledProcessError
 
 def md5sum_data(data):
     """Calculate the MD5 hash of some data.
@@ -375,3 +376,119 @@ def waitpid(pid, timeout=60, kill=False):
         "Process with PID {} did not terminate after {} seconds."
         .format(pid, timeout)
     )
+
+def tool_is_in_path(tool):
+    """Check whether a given command is available on host.
+
+    Args:
+        tool: Command name.
+
+    Return:
+        True if available, False if not.
+    """
+    for path in os.environ["PATH"].split(os.pathsep):
+        fn = os.path.join(path, tool)
+        if os.path.isfile(fn) and os.access(fn, os.X_OK):
+            return True
+    return False
+
+def mk_fs(config, fs_type, size, id):
+    """Create a file system volume.
+
+    Args:
+        fs_type: File system type.
+        size: Size of file system in MiB.
+        id: Prefix string of volume's file name.
+
+    Return:
+        Nothing.
+    """
+    fs_img = '%s.%s.img' % (id, fs_type)
+    fs_img = config.persistent_data_dir + '/' + fs_img
+
+    if fs_type == 'fat16':
+        mkfs_opt = '-F 16'
+    elif fs_type == 'fat32':
+        mkfs_opt = '-F 32'
+    else:
+        mkfs_opt = ''
+
+    if re.match('fat', fs_type):
+        fs_lnxtype = 'vfat'
+    else:
+        fs_lnxtype = fs_type
+
+    count = (size + 1048576 - 1) / 1048576
+
+    try:
+        check_call('rm -f %s' % fs_img, shell=True)
+        check_call('dd if=/dev/zero of=%s bs=1M count=%d'
+            % (fs_img, count), shell=True)
+        check_call('mkfs.%s %s %s'
+            % (fs_lnxtype, mkfs_opt, fs_img), shell=True)
+        if fs_type == 'ext4':
+            sb_content = check_output('tune2fs -l %s' % fs_img, shell=True).decode()
+            if 'metadata_csum' in sb_content:
+                check_call('tune2fs -O ^metadata_csum %s' % fs_img, shell=True)
+        return fs_img
+    except CalledProcessError:
+        call('rm -f %s' % fs_img, shell=True)
+        raise
+
+fuse_mounted = False
+
+def mount_fs(fs_type, device, mount_point):
+    """Mount a volume.
+
+    Args:
+        fs_type: File system type.
+        device: Volume's file name.
+        mount_point: Mount point.
+
+    Return:
+        Nothing.
+    """
+    global fuse_mounted
+
+    try:
+        check_call('guestmount --pid-file guestmount.pid -a %s -m /dev/sda %s'
+            % (device, mount_point), shell=True)
+        fuse_mounted = True
+        return
+    except CalledProcessError:
+        fuse_mounted = False
+
+    mount_opt = 'loop,rw'
+    if re.match('fat', fs_type):
+        mount_opt += ',umask=0000'
+
+    check_call('sudo mount -o %s %s %s'
+        % (mount_opt, device, mount_point), shell=True)
+
+    # may not be effective for some file systems
+    check_call('sudo chmod a+rw %s' % mount_point, shell=True)
+
+def umount_fs(mount_point):
+    """Unmount a volume.
+
+    Args:
+        mount_point: Mount point.
+
+    Return:
+        Nothing.
+    """
+    if fuse_mounted:
+        call('sync')
+        call('guestunmount %s' % mount_point, shell=True)
+
+        try:
+            with open("guestmount.pid", "r") as pidfile:
+                pid = int(pidfile.read())
+            waitpid(pid, kill=True)
+            os.remove("guestmount.pid")
+
+        except FileNotFoundError:
+            pass
+
+    else:
+        call('sudo umount %s' % mount_point, shell=True)

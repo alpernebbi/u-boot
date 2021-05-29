@@ -22,6 +22,7 @@ import pytest
 import re
 from _pytest.runner import runtestprotocol
 import sys
+import u_boot_utils as util
 
 # Globals: The HTML log file, and the connection to the U-Boot console.
 log = None
@@ -492,13 +493,6 @@ def setup_buildconfigspec(item):
         if ubconfig.buildconfig.get('config_' + option.lower(), None):
             pytest.skip('.config feature "%s" enabled' % option.lower())
 
-def tool_is_in_path(tool):
-    for path in os.environ["PATH"].split(os.pathsep):
-        fn = os.path.join(path, tool)
-        if os.path.isfile(fn) and os.access(fn, os.X_OK):
-            return True
-    return False
-
 def setup_requiredtool(item):
     """Process any 'requiredtool' marker for a test.
 
@@ -515,7 +509,7 @@ def setup_requiredtool(item):
 
     for tools in item.iter_markers('requiredtool'):
         tool = tools.args[0]
-        if not tool_is_in_path(tool):
+        if not util.tool_is_in_path(tool):
             pytest.skip('tool "%s" not in $PATH' % tool)
 
 def start_test_section(item):
