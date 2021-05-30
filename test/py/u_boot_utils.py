@@ -435,8 +435,7 @@ def mk_fs(config, fs_type, size, id):
         call('rm -f %s' % fs_img, shell=True)
         raise
 
-fuse_mounted = False
-
+@contextlib.contextmanager
 def mount_fs(fs_type, device, mount_point):
     """Mount a volume.
 
@@ -448,47 +447,41 @@ def mount_fs(fs_type, device, mount_point):
     Return:
         Nothing.
     """
-    global fuse_mounted
-
     try:
         check_call('guestmount --pid-file guestmount.pid -a %s -m /dev/sda %s'
             % (device, mount_point), shell=True)
         fuse_mounted = True
-        return
+
     except CalledProcessError:
         fuse_mounted = False
 
-    mount_opt = 'loop,rw'
-    if re.match('fat', fs_type):
-        mount_opt += ',umask=0000'
+    if not fuse_mounted:
+        mount_opt = 'loop,rw'
+        if re.match('fat', fs_type):
+            mount_opt += ',umask=0000'
 
-    check_call('sudo mount -o %s %s %s'
-        % (mount_opt, device, mount_point), shell=True)
+        check_call('sudo mount -o %s %s %s'
+            % (mount_opt, device, mount_point), shell=True)
 
-    # may not be effective for some file systems
-    check_call('sudo chmod a+rw %s' % mount_point, shell=True)
+        # may not be effective for some file systems
+        check_call('sudo chmod a+rw %s' % mount_point, shell=True)
 
-def umount_fs(mount_point):
-    """Unmount a volume.
+    try:
+        yield
 
-    Args:
-        mount_point: Mount point.
+    finally:
+        if fuse_mounted:
+            call('sync')
+            call('guestunmount %s' % mount_point, shell=True)
 
-    Return:
-        Nothing.
-    """
-    if fuse_mounted:
-        call('sync')
-        call('guestunmount %s' % mount_point, shell=True)
+            try:
+                with open("guestmount.pid", "r") as pidfile:
+                    pid = int(pidfile.read())
+                waitpid(pid, kill=True)
+                os.remove("guestmount.pid")
 
-        try:
-            with open("guestmount.pid", "r") as pidfile:
-                pid = int(pidfile.read())
-            waitpid(pid, kill=True)
-            os.remove("guestmount.pid")
+            except FileNotFoundError:
+                pass
 
-        except FileNotFoundError:
-            pass
-
-    else:
-        call('sudo umount %s' % mount_point, shell=True)
+        else:
+            call('sudo umount %s' % mount_point, shell=True)

@@ -174,9 +174,10 @@ def fs_obj_basic(request, u_boot_config):
         call('rm -f %s' % fs_img, shell=True)
         return
 
+    mount_context = util.mount_fs(fs_type, fs_img, mount_dir)
     try:
         # Mount the image so we can populate it.
-        util.mount_fs(fs_type, fs_img, mount_dir)
+        mount_context.__enter__()
     except CalledProcessError as err:
         pytest.skip('Mounting to folder failed for filesystem: ' + fs_type + '. {}'.format(err))
         call('rmdir %s' % mount_dir, shell=True)
@@ -246,10 +247,10 @@ def fs_obj_basic(request, u_boot_config):
 
     except CalledProcessError as err:
         pytest.skip('Setup failed for filesystem: ' + fs_type + '. {}'.format(err))
-        util.umount_fs(mount_dir)
+        mount_context.__exit__()
         return
     else:
-        util.umount_fs(mount_dir)
+        mount_context.__exit__()
         yield [fs_ubtype, fs_img, md5val]
     finally:
         call('rmdir %s' % mount_dir, shell=True)
@@ -296,9 +297,10 @@ def fs_obj_ext(request, u_boot_config):
         call('rm -f %s' % fs_img, shell=True)
         return
 
+    mount_context = util.mount_fs(fs_type, fs_img, mount_dir)
     try:
         # Mount the image so we can populate it.
-        util.mount_fs(fs_type, fs_img, mount_dir)
+        mount_context.__enter__()
     except CalledProcessError as err:
         pytest.skip('Mounting to folder failed for filesystem: ' + fs_type + '. {}'.format(err))
         call('rmdir %s' % mount_dir, shell=True)
@@ -347,10 +349,10 @@ def fs_obj_ext(request, u_boot_config):
         check_call('rm %s' % tmp_file, shell=True)
     except CalledProcessError:
         pytest.skip('Setup failed for filesystem: ' + fs_type)
-        util.umount_fs(mount_dir)
+        mount_context.__exit__()
         return
     else:
-        util.umount_fs(mount_dir)
+        mount_context.__exit__()
         yield [fs_ubtype, fs_img, md5val]
     finally:
         call('rmdir %s' % mount_dir, shell=True)
@@ -425,9 +427,10 @@ def fs_obj_unlink(request, u_boot_config):
         call('rm -f %s' % fs_img, shell=True)
         return
 
+    mount_context = util.mount_fs(fs_type, fs_img, mount_dir)
     try:
         # Mount the image so we can populate it.
-        util.mount_fs(fs_type, fs_img, mount_dir)
+        mount_context.__enter__()
     except CalledProcessError as err:
         pytest.skip('Mounting to folder failed for filesystem: ' + fs_type + '. {}'.format(err))
         call('rmdir %s' % mount_dir, shell=True)
@@ -458,10 +461,10 @@ def fs_obj_unlink(request, u_boot_config):
 
     except CalledProcessError:
         pytest.skip('Setup failed for filesystem: ' + fs_type)
-        util.umount_fs(mount_dir)
+        mount_context.__exit__()
         return
     else:
-        util.umount_fs(mount_dir)
+        mount_context.__exit__()
         yield [fs_ubtype, fs_img]
     finally:
         call('rmdir %s' % mount_dir, shell=True)
@@ -508,9 +511,10 @@ def fs_obj_symlink(request, u_boot_config):
         call('rm -f %s' % fs_img, shell=True)
         return
 
+    mount_context = util.mount_fs(fs_type, fs_img, mount_dir)
     try:
         # Mount the image so we can populate it.
-        util.mount_fs(fs_type, fs_img, mount_dir)
+        mount_context.__enter__()
     except CalledProcessError as err:
         pytest.skip('Mounting to folder failed for filesystem: ' + fs_type + '. {}'.format(err))
         call('rmdir %s' % mount_dir, shell=True)
@@ -541,10 +545,10 @@ def fs_obj_symlink(request, u_boot_config):
 
     except CalledProcessError:
         pytest.skip('Setup failed for filesystem: ' + fs_type)
-        util.umount_fs(mount_dir)
+        mount_context.__exit__()
         return
     else:
-        util.umount_fs(mount_dir)
+        mount_context.__exit__()
         yield [fs_ubtype, fs_img, md5val]
     finally:
         call('rmdir %s' % mount_dir, shell=True)
