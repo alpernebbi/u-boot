@@ -5,11 +5,14 @@
 
 #include <common.h>
 #include <dm.h>
+#include <display_options.h>
 #include <init.h>
 #include <linux/delay.h>
 #include <log.h>
 #include <panel.h>
 #include <pwm.h>
+#include <stdio_dev.h>
+#include <video_console.h>
 
 #ifdef CONFIG_SPL_BUILD
 /* provided to defeat compiler optimisation in board_init_f() */
@@ -65,6 +68,13 @@ int rk_board_late_init(void)
 	struct udevice *panel;
 	struct udevice *cros_ec;
 	struct udevice *cros_ec_pwm;
+	struct udevice *vidconsole;
+	char *block = (
+		"+------------------------------------------------+\n"
+		"| This message should be visible on the display. |\n"
+		"+------------------------------------------------+\n"
+	);
+	char banner[DISPLAY_OPTIONS_BANNER_LENGTH];
 	int ret;
 
 	printf("Trying to get cros_ec device\n");
@@ -120,6 +130,27 @@ int rk_board_late_init(void)
 		panel_set_backlight(panel, 70);
 		if (ret) {
 			printf("Failed to set panel backlight: %d\n", ret);
+			return 0;
+		}
+	}
+
+	printf("Sleeping for udelay(10000000)...\n");
+	udelay(10000000);
+
+	printf("Trying to get video console device\n");
+	ret = uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &vidconsole);
+	if (ret) {
+		printf("Failed to get vidconsole device: %d\n", ret);
+		return 0;
+
+	} else {
+		printf("Trying to print U-Boot banner on screen\n");
+		display_options_get_banner(true, banner, sizeof(banner));
+		vidconsole_position_cursor(vidconsole, 0, 0);
+		ret = vidconsole_put_string(vidconsole, block);
+		ret = vidconsole_put_string(vidconsole, banner);
+		if (ret) {
+			printf("Failed to print U-Boot banner on screen: %d\n", ret);
 			return 0;
 		}
 	}
