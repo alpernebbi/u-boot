@@ -69,7 +69,8 @@ check_member(rockchip_cru, sdio1_con[1], 0x594);
 #define LPLL_HZ		(600*MHz)
 #define BPLL_HZ		(600*MHz)
 #define GPLL_HZ		(594*MHz)
-#define CPLL_HZ		(384*MHz)
+#define CPLL_HZ		(800*MHz)
+#define NPLL_HZ		(1000*MHz)
 #define PPLL_HZ		(676*MHz)
 
 #define PMU_PCLK_HZ	(48*MHz)
@@ -82,16 +83,16 @@ check_member(rockchip_cru, sdio1_con[1], 0x594);
 #define ATCLK_CORE_B_HZ	(300*MHz)
 #define PCLK_DBG_B_HZ	(100*MHz)
 
-#define PERIHP_ACLK_HZ	(148500*KHz)
-#define PERIHP_HCLK_HZ	(148500*KHz)
-#define PERIHP_PCLK_HZ	(37125*KHz)
+#define PERIHP_ACLK_HZ	(150*MHz)
+#define PERIHP_HCLK_HZ	(75*MHz)
+#define PERIHP_PCLK_HZ	(37500*KHz)
 
-#define PERILP0_ACLK_HZ	(99000*KHz)
-#define PERILP0_HCLK_HZ	(99000*KHz)
-#define PERILP0_PCLK_HZ	(49500*KHz)
+#define PERILP0_ACLK_HZ	(100*MHz)
+#define PERILP0_HCLK_HZ	(100*MHz)
+#define PERILP0_PCLK_HZ	(50*MHz)
 
-#define PERILP1_HCLK_HZ	(99000*KHz)
-#define PERILP1_PCLK_HZ	(49500*KHz)
+#define PERILP1_HCLK_HZ	(100*MHz)
+#define PERILP1_PCLK_HZ	(50*MHz)
 
 #define PWM_CLOCK_HZ    PMU_PCLK_HZ
 
