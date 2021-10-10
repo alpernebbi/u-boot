@@ -56,10 +56,11 @@ struct pll_div {
 	.postdiv1 = _postdiv1, .postdiv2 = _postdiv2, .freq = hz};
 
 #if !defined(CONFIG_SPL_BUILD)
-static const struct pll_div ppll_init_cfg = PLL_DIVISORS(PPLL_HZ, 2, 2, 1);
+static const struct pll_div ppll_init_cfg = PLL_DIVISORS(PPLL_HZ, 3, 2, 1);
 #endif
 
-static const struct pll_div gpll_init_cfg = PLL_DIVISORS(GPLL_HZ, 1, 3, 1);
+static const struct pll_div gpll_init_cfg = PLL_DIVISORS(GPLL_HZ, 1, 4, 1);
+static const struct pll_div cpll_init_cfg = PLL_DIVISORS(CPLL_HZ, 1, 3, 1);
 static const struct pll_div npll_init_cfg = PLL_DIVISORS(NPLL_HZ, 1, 3, 1);
 static const struct pll_div apll_1600_cfg = PLL_DIVISORS(1600*MHz, 3, 1, 1);
 static const struct pll_div apll_816_cfg = PLL_DIVISORS(816*MHz, 1, 2, 1);
@@ -1603,6 +1604,9 @@ static void rkclk_init(struct rockchip_cru *cru)
 	 */
 	if (rkclk_pll_get_rate(&cru->npll_con[0]) != NPLL_HZ)
 		rkclk_set_pll(&cru->npll_con[0], &npll_init_cfg);
+
+	if (rkclk_pll_get_rate(&cru->cpll_con[0]) != CPLL_HZ)
+		rkclk_set_pll(&cru->cpll_con[0], &cpll_init_cfg);
 
 	if (rkclk_pll_get_rate(&cru->gpll_con[0]) == GPLL_HZ)
 		return;

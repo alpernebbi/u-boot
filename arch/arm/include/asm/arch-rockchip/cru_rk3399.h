@@ -74,9 +74,9 @@ struct rockchip_cru {
 check_member(rockchip_cru, sdio1_con[1], 0x594);
 #define KHz		1000
 #define OSC_HZ		(24*MHz)
-#define GPLL_HZ		(800*MHz)
-#define CPLL_HZ		(384*MHz)
-#define NPLL_HZ		(600*MHz)
+#define GPLL_HZ		(594*MHz)
+#define CPLL_HZ		(800*MHz)
+#define NPLL_HZ		(1000*MHz)
 #define PPLL_HZ		(676*MHz)
 
 #define PMU_PCLK_HZ	(48*MHz)
@@ -89,7 +89,7 @@ check_member(rockchip_cru, sdio1_con[1], 0x594);
 #define PERIHP_HCLK_HZ	(75*MHz)
 #define PERIHP_PCLK_HZ	(37500*KHz)
 
-#define PERILP0_ACLK_HZ	(300*MHz)
+#define PERILP0_ACLK_HZ	(100*MHz)
 #define PERILP0_HCLK_HZ	(100*MHz)
 #define PERILP0_PCLK_HZ	(50*MHz)
 
