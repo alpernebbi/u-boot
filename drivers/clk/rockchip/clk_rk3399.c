@@ -1035,9 +1035,11 @@ static ulong rk3399_clk_get_rate(struct clk *clk)
 
 	switch (clk->id) {
 	case PLL_APLLL:
+	case ARMCLKL:
 		rate = rockchip_pll_get_rate(&rk3399_pll_clks[APLLL], priv->cru, APLLL);
 		break;
 	case PLL_APLLB:
+	case ARMCLKB:
 		rate = rockchip_pll_get_rate(&rk3399_pll_clks[APLLB], priv->cru, APLLB);
 		break;
 	case PLL_DPLL:
@@ -1128,8 +1130,31 @@ static ulong rk3399_clk_set_rate(struct clk *clk, ulong rate)
 	ulong ret = 0;
 
 	switch (clk->id) {
-	case 0 ... 63:
-		return 0;
+	case PLL_APLLL:
+	case ARMCLKL:
+		rk3399_configure_cpu(priv->cru, rate, CPU_CLUSTER_LITTLE);
+		rate = rockchip_pll_get_rate(&rk3399_pll_clks[APLLL], priv->cru, APLLL);
+		break;
+	case PLL_APLLB:
+	case ARMCLKB:
+		rk3399_configure_cpu(priv->cru, rate, CPU_CLUSTER_BIG);
+		rate = rockchip_pll_get_rate(&rk3399_pll_clks[APLLB], priv->cru, APLLB);
+		break;
+	case PLL_DPLL:
+		rate = rockchip_pll_set_rate(&rk3399_pll_clks[DPLL], priv->cru, DPLL, rate);
+		break;
+	case PLL_CPLL:
+		rate = rockchip_pll_set_rate(&rk3399_pll_clks[CPLL], priv->cru, CPLL, rate);
+		break;
+	case PLL_GPLL:
+		rate = rockchip_pll_set_rate(&rk3399_pll_clks[GPLL], priv->cru, GPLL, rate);
+		break;
+	case PLL_NPLL:
+		rate = rockchip_pll_set_rate(&rk3399_pll_clks[NPLL], priv->cru, NPLL, rate);
+		break;
+	case PLL_VPLL:
+		rate = rockchip_pll_set_rate(&rk3399_pll_clks[VPLL], priv->cru, VPLL, rate);
+		break;
 
 	case ACLK_PERIHP:
 	case HCLK_PERIHP:
