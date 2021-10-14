@@ -173,6 +173,17 @@ static struct rockchip_pll_rate_table rk3399_pll_rates[] = {
 	{ /* sentinel */ },
 };
 
+static struct rockchip_pll_rate_table rk3399_dpll_rates[] = {
+	/* _mhz, _refdiv, _fbdiv, _postdiv1, _postdiv2, _dsmpd, _frac */
+	RK3036_PLL_RATE(  50000000, 1, 12, 3, 2, 1, 0),
+	RK3036_PLL_RATE( 200000000, 1, 50, 6, 1, 1, 0),
+	RK3036_PLL_RATE( 300000000, 2, 100, 4, 1, 1, 0),
+	RK3036_PLL_RATE( 400000000, 1, 50, 3, 1, 1, 0),
+	RK3036_PLL_RATE( 666000000, 2, 111, 2, 1, 1, 0),
+	RK3036_PLL_RATE( 800000000, 1, 100, 3, 1, 1, 0),
+	RK3036_PLL_RATE( 933000000, 1, 116, 3, 1, 1, 0),
+};
+
 static struct rockchip_pll_clock rk3399_pll_clks[] = {
 	/* _type, _id, _con, _mode, _mshift, _lshift, _pflags, _rtable */
 	[APLLL] = PLL(pll_rk3399, PLL_APLLL, RK3399_PLL_CON(0),
@@ -180,7 +191,7 @@ static struct rockchip_pll_clock rk3399_pll_clks[] = {
 	[APLLB] = PLL(pll_rk3399, PLL_APLLB, RK3399_PLL_CON(8),
 		      RK3399_PLL_CON(11), 8, 31, 0, rk3399_pll_rates),
 	[DPLL] = PLL(pll_rk3399, PLL_DPLL, RK3399_PLL_CON(16),
-		     RK3399_PLL_CON(19), 8, 31, 0, NULL),
+		     RK3399_PLL_CON(19), 8, 31, 0, rk3399_dpll_rates),
 	[CPLL] = PLL(pll_rk3399, PLL_CPLL, RK3399_PLL_CON(24),
 		     RK3399_PLL_CON(27), 8, 31, RKCLK_PLL_SYNC_RATE, rk3399_pll_rates),
 	[GPLL] = PLL(pll_rk3399, PLL_GPLL, RK3399_PLL_CON(32),
@@ -820,49 +831,18 @@ static ulong rk3399_gmac_set_clk(struct rockchip_cru *cru, ulong rate)
 
 #define PMUSGRF_DDR_RGN_CON16 0xff330040
 static ulong rk3399_ddr_set_clk(struct rockchip_cru *cru,
-				ulong set_rate)
+				ulong hz)
 {
-	struct rockchip_pll_rate_table dpll_cfg;
+	int ret = 0;
 
 	/*  IC ECO bug, need to set this register */
 	writel(0xc000c000, PMUSGRF_DDR_RGN_CON16);
 
-	/*  clk_ddrc == DPLL = 24MHz / refdiv * fbdiv / postdiv1 / postdiv2 */
-	switch (set_rate) {
-	case 50 * MHz:
-		dpll_cfg = (struct rockchip_pll_rate_table)
-		{.refdiv = 1, .fbdiv = 12, .postdiv1 = 3, .postdiv2 = 2};
-		break;
-	case 200 * MHz:
-		dpll_cfg = (struct rockchip_pll_rate_table)
-		{.refdiv = 1, .fbdiv = 50, .postdiv1 = 6, .postdiv2 = 1};
-		break;
-	case 300 * MHz:
-		dpll_cfg = (struct rockchip_pll_rate_table)
-		{.refdiv = 2, .fbdiv = 100, .postdiv1 = 4, .postdiv2 = 1};
-		break;
-	case 400 * MHz:
-		dpll_cfg = (struct rockchip_pll_rate_table)
-		{.refdiv = 1, .fbdiv = 50, .postdiv1 = 3, .postdiv2 = 1};
-		break;
-	case 666 * MHz:
-		dpll_cfg = (struct rockchip_pll_rate_table)
-		{.refdiv = 2, .fbdiv = 111, .postdiv1 = 2, .postdiv2 = 1};
-		break;
-	case 800 * MHz:
-		dpll_cfg = (struct rockchip_pll_rate_table)
-		{.refdiv = 1, .fbdiv = 100, .postdiv1 = 3, .postdiv2 = 1};
-		break;
-	case 933 * MHz:
-		dpll_cfg = (struct rockchip_pll_rate_table)
-		{.refdiv = 1, .fbdiv = 116, .postdiv1 = 3, .postdiv2 = 1};
-		break;
-	default:
-		pr_err("Unsupported SDRAM frequency!,%ld\n", set_rate);
-	}
-	rockchip_pll_set_rate(&rk3399_pll_clks[DPLL], cru, DPLL, set_rate);
+	ret = rockchip_pll_set_rate(&rk3399_pll_clks[DPLL], cru, DPLL, hz);
+	if (ret < 0)
+		pr_err("Unsupported SDRAM frequency!,%ld\n", hz);
 
-	return set_rate;
+	return rockchip_pll_get_rate(&rk3399_pll_clks[DPLL], cru, DPLL);
 }
 
 static ulong rk3399_alive_get_clk(struct rockchip_cru *cru)
