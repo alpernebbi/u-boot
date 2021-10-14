@@ -433,8 +433,11 @@ enum {
  *
  */
 
-static uint32_t rkclk_pll_get_rate(u32 *pll_con)
+static ulong rk3399_pll_get_rate(struct rockchip_pll_clock *pll,
+				 void __iomem *base, ulong pll_id)
 {
+	u32 *pll_con = base + pll->con_offset;
+
 	u32 refdiv, fbdiv, postdiv1, postdiv2;
 	u32 con;
 
@@ -457,15 +460,25 @@ static uint32_t rkclk_pll_get_rate(u32 *pll_con)
 	}
 }
 
-static ulong rk3399_pll_get_rate(struct rockchip_pll_clock *pll,
-				 void __iomem *base, ulong pll_id)
+static int rk3399_pll_set_rate(struct rockchip_pll_clock *pll,
+			       void __iomem *base, ulong pll_id,
+			       ulong drate)
 {
-	return rkclk_pll_get_rate(base + pll->con_offset);
-}
+	const struct rockchip_pll_rate_table *rate;
 
-static void rkclk_set_pll(u32 *pll_con,
-			  const struct rockchip_pll_rate_table *rate)
-{
+	rate = rockchip_get_pll_settings(pll, drate);
+	if (!rate) {
+		printf("%s unsupport rate\n", __func__);
+		return -EINVAL;
+	}
+
+	debug("%s: rate settings for %lu fbdiv: %d, postdiv1: %d, refdiv: %d\n",
+	      __func__, rate->rate, rate->fbdiv, rate->postdiv1, rate->refdiv);
+	debug("%s: rate settings for %lu postdiv2: %d, dsmpd: %d, frac: %d\n",
+	      __func__, rate->rate, rate->postdiv2, rate->dsmpd, rate->frac);
+
+	u32 *pll_con = base + pll->con_offset;
+
 	/* All 8 PLLs have same VCO and output frequency range restrictions. */
 	u32 vco_khz = OSC_HZ / 1000 * rate->fbdiv / rate->refdiv;
 	u32 output_khz = vco_khz / rate->postdiv1 / rate->postdiv2;
@@ -505,26 +518,6 @@ static void rkclk_set_pll(u32 *pll_con,
 	/* pll enter normal mode */
 	rk_clrsetreg(&pll_con[3], PLL_MODE_MASK,
 		     PLL_MODE_NORM << PLL_MODE_SHIFT);
-}
-
-static int rk3399_pll_set_rate(struct rockchip_pll_clock *pll,
-			       void __iomem *base, ulong pll_id,
-			       ulong drate)
-{
-	const struct rockchip_pll_rate_table *rate;
-
-	rate = rockchip_get_pll_settings(pll, drate);
-	if (!rate) {
-		printf("%s unsupport rate\n", __func__);
-		return -EINVAL;
-	}
-
-	debug("%s: rate settings for %lu fbdiv: %d, postdiv1: %d, refdiv: %d\n",
-	      __func__, rate->rate, rate->fbdiv, rate->postdiv1, rate->refdiv);
-	debug("%s: rate settings for %lu postdiv2: %d, dsmpd: %d, frac: %d\n",
-	      __func__, rate->rate, rate->postdiv2, rate->dsmpd, rate->frac);
-
-	rkclk_set_pll(base + pll->con_offset, rate);
 
 	debug("PLL at %p: con0=%x con1= %x con2= %x mode= %x\n",
 	      pll, readl(base + pll->con_offset),
