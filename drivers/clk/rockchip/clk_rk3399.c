@@ -41,6 +41,56 @@ struct rk3399_pmuclk_plat {
 	((input_rate) / (output_rate) - 1)
 #define DIV_TO_RATE(input_rate, div)		((input_rate) / ((div) + 1))
 
+#define RK3399_CPUCLK_RATE(_rate, _aclkm_div, _atclk_div, _pdbg_div)	\
+	{								\
+		.rate = _rate##U,					\
+		.aclk_div = _aclkm_div,					\
+		.pclk_div = _pdbg_div,					\
+	}
+
+static struct rockchip_cpu_rate_table rk3399_cpu_l_rates[] = {
+	RK3399_CPUCLK_RATE(1800000000, 1, 8, 8),
+	RK3399_CPUCLK_RATE(1704000000, 1, 8, 8),
+	RK3399_CPUCLK_RATE(1608000000, 1, 7, 7),
+	RK3399_CPUCLK_RATE(1512000000, 1, 7, 7),
+	RK3399_CPUCLK_RATE(1488000000, 1, 6, 6),
+	RK3399_CPUCLK_RATE(1416000000, 1, 6, 6),
+	RK3399_CPUCLK_RATE(1200000000, 1, 5, 5),
+	RK3399_CPUCLK_RATE(1008000000, 1, 5, 5),
+	RK3399_CPUCLK_RATE( 816000000, 1, 4, 4),
+	RK3399_CPUCLK_RATE( 696000000, 1, 3, 3),
+	RK3399_CPUCLK_RATE( 600000000, 1, 3, 3),
+	RK3399_CPUCLK_RATE( 408000000, 1, 2, 2),
+	RK3399_CPUCLK_RATE( 312000000, 1, 1, 1),
+	RK3399_CPUCLK_RATE( 216000000, 1, 1, 1),
+	RK3399_CPUCLK_RATE(  96000000, 1, 1, 1),
+};
+
+static struct rockchip_cpu_rate_table rk3399_cpu_b_rates[] = {
+	RK3399_CPUCLK_RATE(2208000000, 1, 11, 11),
+	RK3399_CPUCLK_RATE(2184000000, 1, 11, 11),
+	RK3399_CPUCLK_RATE(2088000000, 1, 10, 10),
+	RK3399_CPUCLK_RATE(2040000000, 1, 10, 10),
+	RK3399_CPUCLK_RATE(2016000000, 1, 9, 9),
+	RK3399_CPUCLK_RATE(1992000000, 1, 9, 9),
+	RK3399_CPUCLK_RATE(1896000000, 1, 9, 9),
+	RK3399_CPUCLK_RATE(1800000000, 1, 8, 8),
+	RK3399_CPUCLK_RATE(1704000000, 1, 8, 8),
+	RK3399_CPUCLK_RATE(1608000000, 1, 7, 7),
+	RK3399_CPUCLK_RATE(1512000000, 1, 7, 7),
+	RK3399_CPUCLK_RATE(1488000000, 1, 6, 6),
+	RK3399_CPUCLK_RATE(1416000000, 1, 6, 6),
+	RK3399_CPUCLK_RATE(1200000000, 1, 5, 5),
+	RK3399_CPUCLK_RATE(1008000000, 1, 5, 5),
+	RK3399_CPUCLK_RATE( 816000000, 1, 4, 4),
+	RK3399_CPUCLK_RATE( 696000000, 1, 3, 3),
+	RK3399_CPUCLK_RATE( 600000000, 1, 3, 3),
+	RK3399_CPUCLK_RATE( 408000000, 1, 2, 2),
+	RK3399_CPUCLK_RATE( 312000000, 1, 1, 1),
+	RK3399_CPUCLK_RATE( 216000000, 1, 1, 1),
+	RK3399_CPUCLK_RATE(  96000000, 1, 1, 1),
+};
+
 static struct rockchip_pll_rate_table rk3399_pll_rates[] = {
 	/* _mhz, _refdiv, _fbdiv, _postdiv1, _postdiv2, _dsmpd, _frac */
 	RK3036_PLL_RATE(2208000000, 1, 92, 1, 1, 1, 0),
@@ -123,15 +173,6 @@ static struct rockchip_pll_rate_table rk3399_pll_rates[] = {
 	{ /* sentinel */ },
 };
 
-static const struct rockchip_pll_rate_table *apll_cfgs[] = {
-	[APLL_1600_MHZ] = &rk3399_pll_rates[26],
-	[APLL_816_MHZ] = &rk3399_pll_rates[56],
-	[APLL_600_MHZ] = &rk3399_pll_rates[61],
-};
-
-#define RK3399_PLL_CON(x)		((x) * 0x4)
-#define RK3399_PMU_PLL_CON(x)		((x) * 0x4)
-#define RKCLK_PLL_SYNC_RATE		1
 static struct rockchip_pll_clock rk3399_pll_clks[] = {
 	/* _type, _id, _con, _mode, _mshift, _lshift, _pflags, _rtable */
 	[APLLL] = PLL(pll_rk3399, PLL_APLLL, RK3399_PLL_CON(0),
@@ -399,55 +440,47 @@ enum {
 };
 
 void rk3399_configure_cpu(struct rockchip_cru *cru,
-			  enum apll_frequencies freq,
+			  ulong hz,
 			  enum cpu_cluster cluster)
 {
-	u32 aclkm_div;
-	u32 pclk_dbg_div;
-	u32 atclk_div, apll_hz;
-	int con_base, parent;
+	const struct rockchip_cpu_rate_table *rate;
 	enum rk3399_pll_id pll;
+	int con_base, parent;
 
 	switch (cluster) {
 	case CPU_CLUSTER_LITTLE:
+		rate = rockchip_get_cpu_settings(rk3399_cpu_l_rates, hz);
 		con_base = 0;
 		parent = CLK_CORE_PLL_SEL_ALPLL;
 		pll = APLLL;
 		break;
 	case CPU_CLUSTER_BIG:
 	default:
+		rate = rockchip_get_cpu_settings(rk3399_cpu_b_rates, hz);
 		con_base = 2;
 		parent = CLK_CORE_PLL_SEL_ABPLL;
 		pll = APLLB;
 		break;
 	}
 
-	apll_hz = apll_cfgs[freq]->rate;
-	rockchip_pll_set_rate(&rk3399_pll_clks[pll], cru, pll, apll_hz);
+	if (!rate) {
+		printf("%s unsupported rate\n", __func__);
+		return;
+	}
 
-	aclkm_div = apll_hz / ACLKM_CORE_HZ - 1;
-	assert((aclkm_div + 1) * ACLKM_CORE_HZ <= apll_hz &&
-	       aclkm_div < 0x1f);
-
-	pclk_dbg_div = apll_hz / PCLK_DBG_HZ - 1;
-	assert((pclk_dbg_div + 1) * PCLK_DBG_HZ <= apll_hz &&
-	       pclk_dbg_div < 0x1f);
-
-	atclk_div = apll_hz / ATCLK_CORE_HZ - 1;
-	assert((atclk_div + 1) * ATCLK_CORE_HZ <= apll_hz &&
-	       atclk_div < 0x1f);
+	rockchip_pll_set_rate(&rk3399_pll_clks[pll], cru, pll, hz);
 
 	rk_clrsetreg(&cru->clksel_con[con_base],
 		     ACLKM_CORE_DIV_CON_MASK | CLK_CORE_PLL_SEL_MASK |
 		     CLK_CORE_DIV_MASK,
-		     aclkm_div << ACLKM_CORE_DIV_CON_SHIFT |
+		     rate->aclk_div << ACLKM_CORE_DIV_CON_SHIFT |
 		     parent << CLK_CORE_PLL_SEL_SHIFT |
 		     0 << CLK_CORE_DIV_SHIFT);
 
 	rk_clrsetreg(&cru->clksel_con[con_base + 1],
 		     PCLK_DBG_DIV_MASK | ATCLK_CORE_DIV_MASK,
-		     pclk_dbg_div << PCLK_DBG_DIV_SHIFT |
-		     atclk_div << ATCLK_CORE_DIV_SHIFT);
+		     rate->pclk_div << PCLK_DBG_DIV_SHIFT |
+		     rate->pclk_div << ATCLK_CORE_DIV_SHIFT);
 }
 
 #define I2C_CLK_REG_MASK(bus) \
@@ -1486,8 +1519,11 @@ static void rkclk_init(struct rockchip_cru *cru)
 	u32 hclk_div;
 	u32 pclk_div;
 
-	rk3399_configure_cpu(cru, APLL_816_MHZ, CPU_CLUSTER_LITTLE);
-	rk3399_configure_cpu(cru, APLL_816_MHZ, CPU_CLUSTER_BIG);
+	if (rockchip_pll_get_rate(&rk3399_pll_clks[APLLL], cru, APLLL) != APLLL_HZ)
+		rk3399_configure_cpu(cru, APLLL_HZ, CPU_CLUSTER_BIG);
+
+	if (rockchip_pll_get_rate(&rk3399_pll_clks[APLLB], cru, APLLB) != APLLB_HZ)
+		rk3399_configure_cpu(cru, APLLB_HZ, CPU_CLUSTER_BIG);
 
 	/*
 	 * some cru registers changed by bootrom, we'd better reset them to

@@ -74,6 +74,8 @@ struct rockchip_cru {
 check_member(rockchip_cru, sdio1_con[1], 0x594);
 #define KHz		1000
 #define OSC_HZ		(24*MHz)
+#define APLLL_HZ	(816*MHz)
+#define APLLB_HZ	(816*MHz)
 #define GPLL_HZ		(594*MHz)
 #define CPLL_HZ		(800*MHz)
 #define NPLL_HZ		(1000*MHz)
@@ -98,12 +100,6 @@ check_member(rockchip_cru, sdio1_con[1], 0x594);
 
 #define PWM_CLOCK_HZ    PMU_PCLK_HZ
 
-enum apll_frequencies {
-	APLL_1600_MHZ,
-	APLL_816_MHZ,
-	APLL_600_MHZ,
-};
-
 enum cpu_cluster {
 	CPU_CLUSTER_LITTLE,
 	CPU_CLUSTER_BIG,
@@ -127,7 +123,11 @@ struct rk3399_clk_info {
 };
 
 void rk3399_configure_cpu(struct rockchip_cru *cru,
-			  enum apll_frequencies freq,
+			  ulong hz,
 			  enum cpu_cluster cluster);
+
+#define RK3399_PLL_CON(i)	(i * 0x4)
+#define RK3399_PMU_PLL_CON(i)	(i * 0x4)
+#define RKCLK_PLL_SYNC_RATE	1
 
 #endif	/* __ASM_ARCH_CRU_RK3399_H_ */
