@@ -457,6 +457,12 @@ static uint32_t rkclk_pll_get_rate(u32 *pll_con)
 	}
 }
 
+static ulong rk3399_pll_get_rate(struct rockchip_pll_clock *pll,
+				 void __iomem *base, ulong pll_id)
+{
+	return rkclk_pll_get_rate(base + pll->con_offset);
+}
+
 static void rkclk_set_pll(u32 *pll_con,
 			  const struct rockchip_pll_rate_table *rate)
 {
@@ -529,6 +535,7 @@ static int rk3399_pll_set_rate(struct rockchip_pll_clock *pll,
 	return 0;
 }
 
+/*
 static ulong rk3399_pll_get_rate(struct rk3399_clk_priv *priv,
 				 enum rk3399_pll_id pll_id)
 {
@@ -564,6 +571,7 @@ static ulong rk3399_pll_get_rate(struct rk3399_clk_priv *priv,
 
 	return rkclk_pll_get_rate(pll_con);
 }
+*/
 
 static int pll_para_config(u32 freq_hz, struct rockchip_pll_rate_table *rate)
 {
@@ -1253,13 +1261,25 @@ static ulong rk3399_clk_get_rate(struct clk *clk)
 
 	switch (clk->id) {
 	case PLL_APLLL:
+		rate = rk3399_pll_get_rate(&rk3399_pll_clks[APLLL], priv->cru, APLLL);
+		break;
 	case PLL_APLLB:
+		rate = rk3399_pll_get_rate(&rk3399_pll_clks[APLLB], priv->cru, APLLB);
+		break;
 	case PLL_DPLL:
+		rate = rk3399_pll_get_rate(&rk3399_pll_clks[DPLL], priv->cru, DPLL);
+		break;
 	case PLL_CPLL:
+		rate = rk3399_pll_get_rate(&rk3399_pll_clks[CPLL], priv->cru, CPLL);
+		break;
 	case PLL_GPLL:
+		rate = rk3399_pll_get_rate(&rk3399_pll_clks[GPLL], priv->cru, GPLL);
+		break;
 	case PLL_NPLL:
+		rate = rk3399_pll_get_rate(&rk3399_pll_clks[NPLL], priv->cru, NPLL);
+		break;
 	case PLL_VPLL:
-		rate = rk3399_pll_get_rate(priv, clk->id);
+		rate = rk3399_pll_get_rate(&rk3399_pll_clks[VPLL], priv->cru, VPLL);
 		break;
 	case HCLK_SDMMC:
 	case SCLK_SDMMC:
@@ -1713,13 +1733,13 @@ static void rkclk_init(struct rockchip_cru *cru)
 	 * reset/default values described in TRM to avoid confusion in kernel.
 	 * Please consider these three lines as a fix of bootrom bug.
 	 */
-	if (rkclk_pll_get_rate(&cru->npll_con[0]) != NPLL_HZ)
+	if (rk3399_pll_get_rate(&rk3399_pll_clks[NPLL], cru, NPLL) != NPLL_HZ)
 		rk3399_pll_set_rate(&rk3399_pll_clks[NPLL], cru, NPLL, NPLL_HZ);
 
-	if (rkclk_pll_get_rate(&cru->cpll_con[0]) != CPLL_HZ)
+	if (rk3399_pll_get_rate(&rk3399_pll_clks[CPLL], cru, CPLL) != CPLL_HZ)
 		rk3399_pll_set_rate(&rk3399_pll_clks[CPLL], cru, CPLL, CPLL_HZ);
 
-	if (rkclk_pll_get_rate(&cru->gpll_con[0]) == GPLL_HZ)
+	if (rk3399_pll_get_rate(&rk3399_pll_clks[GPLL], cru, GPLL) == GPLL_HZ)
 		return;
 
 	rk_clrsetreg(&cru->clksel_con[12], 0xffff, 0x4101);
@@ -1833,20 +1853,20 @@ static int rk3399_clk_probe(struct udevice *dev)
 	priv->sync_kernel = false;
 	if (!priv->armlclk_enter_hz)
 		priv->armlclk_enter_hz =
-		rkclk_pll_get_rate(&priv->cru->apll_l_con[0]);
+		rk3399_pll_get_rate(&rk3399_pll_clks[APLLL], priv->cru, APLLL);
 	if (!priv->armbclk_enter_hz)
 		priv->armbclk_enter_hz =
-		rkclk_pll_get_rate(&priv->cru->apll_b_con[0]);
+		rk3399_pll_get_rate(&rk3399_pll_clks[APLLB], priv->cru, APLLB);
 
 	if (init_clocks)
 		rkclk_init(priv->cru);
 
 	if (!priv->armlclk_init_hz)
 		priv->armlclk_init_hz =
-		rkclk_pll_get_rate(&priv->cru->apll_l_con[0]);
+		rk3399_pll_get_rate(&rk3399_pll_clks[APLLL], priv->cru, APLLL);
 	if (!priv->armbclk_init_hz)
 		priv->armbclk_init_hz =
-		rkclk_pll_get_rate(&priv->cru->apll_b_con[0]);
+		rk3399_pll_get_rate(&rk3399_pll_clks[APLLB], priv->cru, APLLB);
 
 	return 0;
 }
