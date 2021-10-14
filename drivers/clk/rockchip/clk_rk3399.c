@@ -23,7 +23,6 @@
 #include <dm/lists.h>
 #include <dt-bindings/clock/rk3399-cru.h>
 #include <linux/bitops.h>
-#include <div64.h>
 #include <linux/delay.h>
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -152,13 +151,6 @@ static struct rockchip_pll_clock rk3399_pll_clks[] = {
 	[PPLL] = PLL(pll_rk3399, PLL_PPLL, RK3399_PMU_PLL_CON(0),
 		     RK3399_PMU_PLL_CON(3), 8, 31, RKCLK_PLL_SYNC_RATE, rk3399_pll_rates),
 };
-
-struct rockchip_pll_rate_table *
-rockchip_pll_clk_set_by_auto(ulong fin_hz,
-			     ulong fout_hz);
-
-const struct rockchip_pll_rate_table *
-rockchip_get_pll_settings(struct rockchip_pll_clock *pll, ulong rate);
 
 #ifndef CONFIG_SPL_BUILD
 #define RK3399_CLK_DUMP(_id, _name, _iscru)    \
@@ -406,168 +398,6 @@ enum {
 	RESETN_DDRPHY1_REQ_MASK		= 1 << RESETN_DDRPHY1_REQ_SHIFT,
 };
 
-#define VCO_MAX_KHZ	(3200 * (MHz / KHz))
-#define VCO_MIN_KHZ	(800 * (MHz / KHz))
-#define OUTPUT_MAX_KHZ	(3200 * (MHz / KHz))
-#define OUTPUT_MIN_KHZ	(16 * (MHz / KHz))
-
-/*
- *  the div restructions of pll in integer mode, these are defined in
- *  * CRU_*PLL_CON0 or PMUCRU_*PLL_CON0
- */
-#define PLL_DIV_MIN	16
-#define PLL_DIV_MAX	3200
-
-/*
- * How to calculate the PLL(from TRM V0.3 Part 1 Page 63):
- * Formulas also embedded within the Fractional PLL Verilog model:
- * If DSMPD = 1 (DSM is disabled, "integer mode")
- * FOUTVCO = FREF / REFDIV * FBDIV
- * FOUTPOSTDIV = FOUTVCO / POSTDIV1 / POSTDIV2
- * Where:
- * FOUTVCO = Fractional PLL non-divided output frequency
- * FOUTPOSTDIV = Fractional PLL divided output frequency
- *               (output of second post divider)
- * FREF = Fractional PLL input reference frequency, (the OSC_HZ 24MHz input)
- * REFDIV = Fractional PLL input reference clock divider
- * FBDIV = Integer value programmed into feedback divide
- *
- */
-
-#define RK3399_PLLCON0_FBDIV_MASK		0xfff
-#define RK3399_PLLCON0_FBDIV_SHIFT		0
-#define RK3399_PLLCON1_REFDIV_MASK		0x3f
-#define RK3399_PLLCON1_REFDIV_SHIFT		0
-#define RK3399_PLLCON1_POSTDIV1_MASK		0x7 << 8
-#define RK3399_PLLCON1_POSTDIV1_SHIFT		8
-#define RK3399_PLLCON1_POSTDIV2_MASK		0x7 << 12
-#define RK3399_PLLCON1_POSTDIV2_SHIFT		12
-#define RK3399_PLLCON2_FRAC_MASK		0xffffff
-#define RK3399_PLLCON2_FRAC_SHIFT		0
-#define RK3399_PLLCON2_LOCK_STATUS		BIT(31)
-#define RK3399_PLLCON3_PWRDOWN			BIT(0)
-#define RK3399_PLLCON3_DSMPD_MASK		0x1 << 3
-#define RK3399_PLLCON3_DSMPD_SHIFT		3
-
-static ulong rk3399_pll_get_rate(struct rockchip_pll_clock *pll,
-				 void __iomem *base, ulong pll_id)
-{
-	u32 refdiv, fbdiv, postdiv1, postdiv2, dsmpd, frac;
-	u32 con = 0, shift, mask;
-	ulong rate;
-
-	/* normally done in rockchip_pll_get_rate() */
-	pll->mode_mask = PLL_MODE_MASK;
-
-	con = readl(base + pll->mode_offset);
-	shift = pll->mode_shift;
-	mask = pll->mode_mask << shift;
-
-	switch ((con & mask) >> shift) {
-	case RKCLK_PLL_MODE_SLOW:
-		return OSC_HZ;
-	case RKCLK_PLL_MODE_NORMAL:
-		/* normal mode */
-		con = readl(base + pll->con_offset);
-		fbdiv = (con & RK3399_PLLCON0_FBDIV_MASK) >>
-			RK3399_PLLCON0_FBDIV_SHIFT;
-		con = readl(base + pll->con_offset + 0x4);
-		refdiv = (con & RK3399_PLLCON1_REFDIV_MASK) >>
-			 RK3399_PLLCON1_REFDIV_SHIFT;
-		postdiv1 = (con & RK3399_PLLCON1_POSTDIV1_MASK) >>
-			   RK3399_PLLCON1_POSTDIV1_SHIFT;
-		postdiv2 = (con & RK3399_PLLCON1_POSTDIV2_MASK) >>
-			   RK3399_PLLCON1_POSTDIV2_SHIFT;
-		con = readl(base + pll->con_offset + 0x8);
-		frac = (con & RK3399_PLLCON2_FRAC_MASK) >>
-			RK3399_PLLCON2_FRAC_SHIFT;
-		con = readl(base + pll->con_offset + 0xc);
-		dsmpd = (con & RK3399_PLLCON3_DSMPD_MASK) >>
-			RK3399_PLLCON3_DSMPD_SHIFT;
-		rate = (24 * fbdiv / (refdiv * postdiv1 * postdiv2)) * 1000000;
-		if (dsmpd == 0) {
-			u64 frac_rate = OSC_HZ * (u64)frac;
-
-			do_div(frac_rate, refdiv);
-			frac_rate >>= 24;
-			do_div(frac_rate, postdiv1);
-			do_div(frac_rate, postdiv2);
-			rate += frac_rate;
-		}
-		return rate;
-	case RKCLK_PLL_MODE_DEEP:
-	default:
-		return 32768;
-	}
-}
-
-static int rk3399_pll_set_rate(struct rockchip_pll_clock *pll,
-			       void __iomem *base, ulong pll_id,
-			       ulong drate)
-{
-	const struct rockchip_pll_rate_table *rate;
-	u32 con;
-
-	/* normally done in rockchip_pll_get_rate() */
-	pll->mode_mask = PLL_MODE_MASK;
-
-	rate = rockchip_get_pll_settings(pll, drate);
-	if (!rate) {
-		printf("%s unsupport rate\n", __func__);
-		return -EINVAL;
-	}
-
-	debug("%s: rate settings for %lu fbdiv: %d, postdiv1: %d, refdiv: %d\n",
-	      __func__, rate->rate, rate->fbdiv, rate->postdiv1, rate->refdiv);
-	debug("%s: rate settings for %lu postdiv2: %d, dsmpd: %d, frac: %d\n",
-	      __func__, rate->rate, rate->postdiv2, rate->dsmpd, rate->frac);
-
-	/*
-	 * When power on or changing PLL setting,
-	 * we must force PLL into slow mode to ensure output stable clock.
-	 */
-	rk_clrsetreg(base + pll->mode_offset,
-		     pll->mode_mask << pll->mode_shift,
-		     RKCLK_PLL_MODE_SLOW << pll->mode_shift);
-
-	rk_clrsetreg(base + pll->con_offset,
-		     RK3399_PLLCON0_FBDIV_MASK,
-		     rate->fbdiv << RK3399_PLLCON0_FBDIV_SHIFT);
-
-	rk_clrsetreg(base + pll->con_offset + 0x4,
-		     (RK3399_PLLCON1_REFDIV_MASK |
-		      RK3399_PLLCON1_POSTDIV1_MASK |
-		      RK3399_PLLCON1_POSTDIV2_MASK),
-		     (rate->refdiv << RK3399_PLLCON1_REFDIV_SHIFT |
-		      rate->postdiv1 << RK3399_PLLCON1_POSTDIV1_SHIFT |
-		      rate->postdiv2 << RK3399_PLLCON1_POSTDIV2_SHIFT));
-
-	/* CRU_*PLL_CON2 does not have write mask bits */
-	con = readl(base + pll->con_offset + 0x8);
-	con &= ~(RK3399_PLLCON2_FRAC_MASK << RK3399_PLLCON2_FRAC_SHIFT);
-	con |= (rate->frac << RK3399_PLLCON2_FRAC_SHIFT);
-	writel(con, base + pll->con_offset + 0x8);
-
-	rk_clrsetreg(base + pll->con_offset + 0xc,
-		     RK3399_PLLCON3_DSMPD_MASK,
-		     rate->dsmpd << RK3399_PLLCON3_DSMPD_SHIFT);
-
-	/* waiting for pll lock */
-	while (!(readl(base + pll->con_offset + 0x8) & (1 << pll->lock_shift)))
-		udelay(1);
-
-	rk_clrsetreg(base + pll->mode_offset, pll->mode_mask << pll->mode_shift,
-		     RKCLK_PLL_MODE_NORMAL << pll->mode_shift);
-	debug("PLL at %p: con0=%x con1= %x con2= %x con3= %x mode= %x\n",
-	      pll, readl(base + pll->con_offset),
-	      readl(base + pll->con_offset + 0x4),
-	      readl(base + pll->con_offset + 0x8),
-	      readl(base + pll->con_offset + 0xc),
-	      readl(base + pll->mode_offset));
-
-	return 0;
-}
-
 void rk3399_configure_cpu(struct rockchip_cru *cru,
 			  enum apll_frequencies freq,
 			  enum cpu_cluster cluster)
@@ -593,7 +423,7 @@ void rk3399_configure_cpu(struct rockchip_cru *cru,
 	}
 
 	apll_hz = apll_cfgs[freq]->rate;
-	rk3399_pll_set_rate(&rk3399_pll_clks[pll], cru, pll, apll_hz);
+	rockchip_pll_set_rate(&rk3399_pll_clks[pll], cru, pll, apll_hz);
 
 	aclkm_div = apll_hz / ACLKM_CORE_HZ - 1;
 	assert((aclkm_div + 1) * ACLKM_CORE_HZ <= apll_hz &&
@@ -830,9 +660,9 @@ static ulong rk3399_vop_set_clk(struct rockchip_cru *cru, ulong clk_id, u32 hz)
 		     (div - 1) << ACLK_VOP_DIV_CON_SHIFT);
 
 	if (readl(dclkreg_addr) & DCLK_VOP_PLL_SEL_MASK) {
-		rk3399_pll_set_rate(&rk3399_pll_clks[CPLL], cru, CPLL, hz);
+		rockchip_pll_set_rate(&rk3399_pll_clks[CPLL], cru, CPLL, hz);
 	} else {
-		rk3399_pll_set_rate(&rk3399_pll_clks[VPLL], cru, VPLL, hz);
+		rockchip_pll_set_rate(&rk3399_pll_clks[VPLL], cru, VPLL, hz);
 	}
 
 	rk_clrsetreg(dclkreg_addr,
@@ -997,7 +827,7 @@ static ulong rk3399_ddr_set_clk(struct rockchip_cru *cru,
 	default:
 		pr_err("Unsupported SDRAM frequency!,%ld\n", set_rate);
 	}
-	rk3399_pll_set_rate(&rk3399_pll_clks[DPLL], cru, DPLL, set_rate);
+	rockchip_pll_set_rate(&rk3399_pll_clks[DPLL], cru, DPLL, set_rate);
 
 	return set_rate;
 }
@@ -1192,25 +1022,25 @@ static ulong rk3399_clk_get_rate(struct clk *clk)
 
 	switch (clk->id) {
 	case PLL_APLLL:
-		rate = rk3399_pll_get_rate(&rk3399_pll_clks[APLLL], priv->cru, APLLL);
+		rate = rockchip_pll_get_rate(&rk3399_pll_clks[APLLL], priv->cru, APLLL);
 		break;
 	case PLL_APLLB:
-		rate = rk3399_pll_get_rate(&rk3399_pll_clks[APLLB], priv->cru, APLLB);
+		rate = rockchip_pll_get_rate(&rk3399_pll_clks[APLLB], priv->cru, APLLB);
 		break;
 	case PLL_DPLL:
-		rate = rk3399_pll_get_rate(&rk3399_pll_clks[DPLL], priv->cru, DPLL);
+		rate = rockchip_pll_get_rate(&rk3399_pll_clks[DPLL], priv->cru, DPLL);
 		break;
 	case PLL_CPLL:
-		rate = rk3399_pll_get_rate(&rk3399_pll_clks[CPLL], priv->cru, CPLL);
+		rate = rockchip_pll_get_rate(&rk3399_pll_clks[CPLL], priv->cru, CPLL);
 		break;
 	case PLL_GPLL:
-		rate = rk3399_pll_get_rate(&rk3399_pll_clks[GPLL], priv->cru, GPLL);
+		rate = rockchip_pll_get_rate(&rk3399_pll_clks[GPLL], priv->cru, GPLL);
 		break;
 	case PLL_NPLL:
-		rate = rk3399_pll_get_rate(&rk3399_pll_clks[NPLL], priv->cru, NPLL);
+		rate = rockchip_pll_get_rate(&rk3399_pll_clks[NPLL], priv->cru, NPLL);
 		break;
 	case PLL_VPLL:
-		rate = rk3399_pll_get_rate(&rk3399_pll_clks[VPLL], priv->cru, VPLL);
+		rate = rockchip_pll_get_rate(&rk3399_pll_clks[VPLL], priv->cru, VPLL);
 		break;
 	case HCLK_SDMMC:
 	case SCLK_SDMMC:
@@ -1664,13 +1494,13 @@ static void rkclk_init(struct rockchip_cru *cru)
 	 * reset/default values described in TRM to avoid confusion in kernel.
 	 * Please consider these three lines as a fix of bootrom bug.
 	 */
-	if (rk3399_pll_get_rate(&rk3399_pll_clks[NPLL], cru, NPLL) != NPLL_HZ)
-		rk3399_pll_set_rate(&rk3399_pll_clks[NPLL], cru, NPLL, NPLL_HZ);
+	if (rockchip_pll_get_rate(&rk3399_pll_clks[NPLL], cru, NPLL) != NPLL_HZ)
+		rockchip_pll_set_rate(&rk3399_pll_clks[NPLL], cru, NPLL, NPLL_HZ);
 
-	if (rk3399_pll_get_rate(&rk3399_pll_clks[CPLL], cru, CPLL) != CPLL_HZ)
-		rk3399_pll_set_rate(&rk3399_pll_clks[CPLL], cru, CPLL, CPLL_HZ);
+	if (rockchip_pll_get_rate(&rk3399_pll_clks[CPLL], cru, CPLL) != CPLL_HZ)
+		rockchip_pll_set_rate(&rk3399_pll_clks[CPLL], cru, CPLL, CPLL_HZ);
 
-	if (rk3399_pll_get_rate(&rk3399_pll_clks[GPLL], cru, GPLL) == GPLL_HZ)
+	if (rockchip_pll_get_rate(&rk3399_pll_clks[GPLL], cru, GPLL) == GPLL_HZ)
 		return;
 
 	rk_clrsetreg(&cru->clksel_con[12], 0xffff, 0x4101);
@@ -1758,7 +1588,7 @@ static void rkclk_init(struct rockchip_cru *cru)
 	rk_clrsetreg(&cru->clksel_con[63], I2C_CLK_REG_MASK(7),
 		     I2C_CLK_REG_VALUE(7, 4));
 
-	rk3399_pll_set_rate(&rk3399_pll_clks[GPLL], cru, GPLL, GPLL_HZ);
+	rockchip_pll_set_rate(&rk3399_pll_clks[GPLL], cru, GPLL, GPLL_HZ);
 }
 
 static int rk3399_clk_probe(struct udevice *dev)
@@ -1784,20 +1614,20 @@ static int rk3399_clk_probe(struct udevice *dev)
 	priv->sync_kernel = false;
 	if (!priv->armlclk_enter_hz)
 		priv->armlclk_enter_hz =
-		rk3399_pll_get_rate(&rk3399_pll_clks[APLLL], priv->cru, APLLL);
+		rockchip_pll_get_rate(&rk3399_pll_clks[APLLL], priv->cru, APLLL);
 	if (!priv->armbclk_enter_hz)
 		priv->armbclk_enter_hz =
-		rk3399_pll_get_rate(&rk3399_pll_clks[APLLB], priv->cru, APLLB);
+		rockchip_pll_get_rate(&rk3399_pll_clks[APLLB], priv->cru, APLLB);
 
 	if (init_clocks)
 		rkclk_init(priv->cru);
 
 	if (!priv->armlclk_init_hz)
 		priv->armlclk_init_hz =
-		rk3399_pll_get_rate(&rk3399_pll_clks[APLLL], priv->cru, APLLL);
+		rockchip_pll_get_rate(&rk3399_pll_clks[APLLL], priv->cru, APLLL);
 	if (!priv->armbclk_init_hz)
 		priv->armbclk_init_hz =
-		rk3399_pll_get_rate(&rk3399_pll_clks[APLLB], priv->cru, APLLB);
+		rockchip_pll_get_rate(&rk3399_pll_clks[APLLB], priv->cru, APLLB);
 
 	return 0;
 }
@@ -1987,7 +1817,7 @@ static void pmuclk_init(struct rk3399_pmucru *pmucru)
 	u32 pclk_div;
 
 	/*  configure pmu pll(ppll) */
-	rk3399_pll_set_rate(&rk3399_pll_clks[PPLL], pmucru, PPLL, PPLL_HZ);
+	rockchip_pll_set_rate(&rk3399_pll_clks[PPLL], pmucru, PPLL, PPLL_HZ);
 
 	/*  configure pmu pclk */
 	pclk_div = PPLL_HZ / PMU_PCLK_HZ - 1;
