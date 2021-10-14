@@ -637,24 +637,24 @@ void rk3399_configure_cpu(struct rockchip_cru *cru,
 	u32 pclk_dbg_div;
 	u32 atclk_div, apll_hz;
 	int con_base, parent;
-	u32 *pll_con;
+	enum rk3399_pll_id pll;
 
 	switch (cluster) {
 	case CPU_CLUSTER_LITTLE:
 		con_base = 0;
 		parent = CLK_CORE_PLL_SEL_ALPLL;
-		pll_con = &cru->apll_l_con[0];
+		pll = APLLL;
 		break;
 	case CPU_CLUSTER_BIG:
 	default:
 		con_base = 2;
 		parent = CLK_CORE_PLL_SEL_ABPLL;
-		pll_con = &cru->apll_b_con[0];
+		pll = APLLB;
 		break;
 	}
 
 	apll_hz = apll_cfgs[freq]->rate;
-	rkclk_set_pll(pll_con, apll_cfgs[freq]);
+	rk3399_pll_set_rate(&rk3399_pll_clks[pll], cru, pll, apll_hz);
 
 	aclkm_div = apll_hz / ACLKM_CORE_HZ - 1;
 	assert((aclkm_div + 1) * ACLKM_CORE_HZ <= apll_hz &&
@@ -865,7 +865,6 @@ static ulong rk3399_spi_set_clk(struct rockchip_cru *cru, ulong clk_id, uint hz)
 
 static ulong rk3399_vop_set_clk(struct rockchip_cru *cru, ulong clk_id, u32 hz)
 {
-	struct rockchip_pll_rate_table *vpll_config, *cpll_config;
 	int aclk_vop = RK3399_LIMIT_PLL_ACLK_VOP;
 	void *aclkreg_addr, *dclkreg_addr;
 	u32 div = 1;
@@ -892,15 +891,9 @@ static ulong rk3399_vop_set_clk(struct rockchip_cru *cru, ulong clk_id, u32 hz)
 		     (div - 1) << ACLK_VOP_DIV_CON_SHIFT);
 
 	if (readl(dclkreg_addr) & DCLK_VOP_PLL_SEL_MASK) {
-		cpll_config = rockchip_pll_clk_set_by_auto(24 * MHz, hz);
-		if (!cpll_config)
-			return -1;
-		rkclk_set_pll(&cru->cpll_con[0], cpll_config);
+		rk3399_pll_set_rate(&rk3399_pll_clks[CPLL], cru, CPLL, hz);
 	} else {
-		vpll_config = rockchip_pll_clk_set_by_auto(24 * MHz, hz);
-		if (!vpll_config)
-			return -1;
-		rkclk_set_pll(&cru->vpll_con[0], vpll_config);
+		rk3399_pll_set_rate(&rk3399_pll_clks[VPLL], cru, VPLL, hz);
 	}
 
 	rk_clrsetreg(dclkreg_addr,
@@ -1065,7 +1058,7 @@ static ulong rk3399_ddr_set_clk(struct rockchip_cru *cru,
 	default:
 		pr_err("Unsupported SDRAM frequency!,%ld\n", set_rate);
 	}
-	rkclk_set_pll(&cru->dpll_con[0], &dpll_cfg);
+	rk3399_pll_set_rate(&rk3399_pll_clks[DPLL], cru, DPLL, set_rate);
 
 	return set_rate;
 }
@@ -2043,7 +2036,7 @@ static void pmuclk_init(struct rk3399_pmucru *pmucru)
 	u32 pclk_div;
 
 	/*  configure pmu pll(ppll) */
-	rkclk_set_pll(&pmucru->ppll_con[0], &rk3399_pll_rates[60]);
+	rk3399_pll_set_rate(&rk3399_pll_clks[PPLL], pmucru, PPLL, PPLL_HZ);
 
 	/*  configure pmu pclk */
 	pclk_div = PPLL_HZ / PMU_PCLK_HZ - 1;
