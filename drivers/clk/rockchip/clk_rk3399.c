@@ -129,6 +129,10 @@ static const struct rockchip_pll_rate_table *apll_cfgs[] = {
 	[APLL_600_MHZ] = &rk3399_pll_rates[61],
 };
 
+struct rockchip_pll_rate_table *
+rockchip_pll_clk_set_by_auto(ulong fin_hz,
+			     ulong fout_hz);
+
 #ifndef CONFIG_SPL_BUILD
 #define RK3399_CLK_DUMP(_id, _name, _iscru)    \
 {                                              \
@@ -807,7 +811,7 @@ static ulong rk3399_spi_set_clk(struct rockchip_cru *cru, ulong clk_id, uint hz)
 
 static ulong rk3399_vop_set_clk(struct rockchip_cru *cru, ulong clk_id, u32 hz)
 {
-	struct rockchip_pll_rate_table vpll_config = {0}, cpll_config = {0};
+	struct rockchip_pll_rate_table *vpll_config, *cpll_config;
 	int aclk_vop = RK3399_LIMIT_PLL_ACLK_VOP;
 	void *aclkreg_addr, *dclkreg_addr;
 	u32 div = 1;
@@ -834,13 +838,15 @@ static ulong rk3399_vop_set_clk(struct rockchip_cru *cru, ulong clk_id, u32 hz)
 		     (div - 1) << ACLK_VOP_DIV_CON_SHIFT);
 
 	if (readl(dclkreg_addr) & DCLK_VOP_PLL_SEL_MASK) {
-		if (pll_para_config(hz, &cpll_config))
+		cpll_config = rockchip_pll_clk_set_by_auto(24 * MHz, hz);
+		if (!cpll_config)
 			return -1;
-		rkclk_set_pll(&cru->cpll_con[0], &cpll_config);
+		rkclk_set_pll(&cru->cpll_con[0], cpll_config);
 	} else {
-		if (pll_para_config(hz, &vpll_config))
+		vpll_config = rockchip_pll_clk_set_by_auto(24 * MHz, hz);
+		if (!vpll_config)
 			return -1;
-		rkclk_set_pll(&cru->vpll_con[0], &vpll_config);
+		rkclk_set_pll(&cru->vpll_con[0], vpll_config);
 	}
 
 	rk_clrsetreg(dclkreg_addr,

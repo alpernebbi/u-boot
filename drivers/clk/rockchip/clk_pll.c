@@ -104,7 +104,7 @@ static int rockchip_pll_clk_set_postdiv(ulong fout_hz,
 	return 0;
 }
 
-static struct rockchip_pll_rate_table *
+struct rockchip_pll_rate_table *
 rockchip_pll_clk_set_by_auto(ulong fin_hz,
 			     ulong fout_hz)
 {
