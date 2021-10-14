@@ -164,7 +164,7 @@ rockchip_pll_clk_set_by_auto(ulong fin_hz,
 	return rate_table;
 }
 
-static const struct rockchip_pll_rate_table *
+const struct rockchip_pll_rate_table *
 rockchip_get_pll_settings(struct rockchip_pll_clock *pll, ulong rate)
 {
 	struct rockchip_pll_rate_table  *rate_table = pll->rate_table;

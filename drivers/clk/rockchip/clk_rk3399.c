@@ -129,9 +129,35 @@ static const struct rockchip_pll_rate_table *apll_cfgs[] = {
 	[APLL_600_MHZ] = &rk3399_pll_rates[61],
 };
 
+#define RK3399_PLL_CON(x)		((x) * 0x4)
+#define RK3399_PMU_PLL_CON(x)		((x) * 0x4)
+#define RKCLK_PLL_SYNC_RATE		1
+static struct rockchip_pll_clock rk3399_pll_clks[] = {
+	/* _type, _id, _con, _mode, _mshift, _lshift, _pflags, _rtable */
+	[APLLL] = PLL(pll_rk3399, PLL_APLLL, RK3399_PLL_CON(0),
+		      RK3399_PLL_CON(3), 8, 31, 0, rk3399_pll_rates),
+	[APLLB] = PLL(pll_rk3399, PLL_APLLB, RK3399_PLL_CON(8),
+		      RK3399_PLL_CON(11), 8, 31, 0, rk3399_pll_rates),
+	[DPLL] = PLL(pll_rk3399, PLL_DPLL, RK3399_PLL_CON(16),
+		     RK3399_PLL_CON(19), 8, 31, 0, NULL),
+	[CPLL] = PLL(pll_rk3399, PLL_CPLL, RK3399_PLL_CON(24),
+		     RK3399_PLL_CON(27), 8, 31, RKCLK_PLL_SYNC_RATE, rk3399_pll_rates),
+	[GPLL] = PLL(pll_rk3399, PLL_GPLL, RK3399_PLL_CON(32),
+		     RK3399_PLL_CON(35), 8, 31, RKCLK_PLL_SYNC_RATE, rk3399_pll_rates),
+	[NPLL] = PLL(pll_rk3399, PLL_NPLL, RK3399_PLL_CON(40),
+		     RK3399_PLL_CON(43), 8, 31, RKCLK_PLL_SYNC_RATE, rk3399_pll_rates),
+	[VPLL] = PLL(pll_rk3399, PLL_VPLL, RK3399_PLL_CON(48),
+		     RK3399_PLL_CON(51), 8, 31, RKCLK_PLL_SYNC_RATE, rk3399_pll_rates),
+	[PPLL] = PLL(pll_rk3399, PLL_PPLL, RK3399_PMU_PLL_CON(0),
+		     RK3399_PMU_PLL_CON(3), 8, 31, RKCLK_PLL_SYNC_RATE, rk3399_pll_rates),
+};
+
 struct rockchip_pll_rate_table *
 rockchip_pll_clk_set_by_auto(ulong fin_hz,
 			     ulong fout_hz);
+
+const struct rockchip_pll_rate_table *
+rockchip_get_pll_settings(struct rockchip_pll_clock *pll, ulong rate);
 
 #ifndef CONFIG_SPL_BUILD
 #define RK3399_CLK_DUMP(_id, _name, _iscru)    \
@@ -473,6 +499,34 @@ static void rkclk_set_pll(u32 *pll_con,
 	/* pll enter normal mode */
 	rk_clrsetreg(&pll_con[3], PLL_MODE_MASK,
 		     PLL_MODE_NORM << PLL_MODE_SHIFT);
+}
+
+static int rk3399_pll_set_rate(struct rockchip_pll_clock *pll,
+			       void __iomem *base, ulong pll_id,
+			       ulong drate)
+{
+	const struct rockchip_pll_rate_table *rate;
+
+	rate = rockchip_get_pll_settings(pll, drate);
+	if (!rate) {
+		printf("%s unsupport rate\n", __func__);
+		return -EINVAL;
+	}
+
+	debug("%s: rate settings for %lu fbdiv: %d, postdiv1: %d, refdiv: %d\n",
+	      __func__, rate->rate, rate->fbdiv, rate->postdiv1, rate->refdiv);
+	debug("%s: rate settings for %lu postdiv2: %d, dsmpd: %d, frac: %d\n",
+	      __func__, rate->rate, rate->postdiv2, rate->dsmpd, rate->frac);
+
+	rkclk_set_pll(base + pll->con_offset, rate);
+
+	debug("PLL at %p: con0=%x con1= %x con2= %x mode= %x\n",
+	      pll, readl(base + pll->con_offset),
+	      readl(base + pll->con_offset + 0x4),
+	      readl(base + pll->con_offset + 0x8),
+	      readl(base + pll->mode_offset));
+
+	return 0;
 }
 
 static ulong rk3399_pll_get_rate(struct rk3399_clk_priv *priv,
@@ -1667,10 +1721,10 @@ static void rkclk_init(struct rockchip_cru *cru)
 	 * Please consider these three lines as a fix of bootrom bug.
 	 */
 	if (rkclk_pll_get_rate(&cru->npll_con[0]) != NPLL_HZ)
-		rkclk_set_pll(&cru->npll_con[0], &rk3399_pll_rates[47]);
+		rk3399_pll_set_rate(&rk3399_pll_clks[NPLL], cru, NPLL, NPLL_HZ);
 
 	if (rkclk_pll_get_rate(&cru->cpll_con[0]) != CPLL_HZ)
-		rkclk_set_pll(&cru->cpll_con[0], &rk3399_pll_rates[57]);
+		rk3399_pll_set_rate(&rk3399_pll_clks[CPLL], cru, CPLL, CPLL_HZ);
 
 	if (rkclk_pll_get_rate(&cru->gpll_con[0]) == GPLL_HZ)
 		return;
@@ -1760,7 +1814,7 @@ static void rkclk_init(struct rockchip_cru *cru)
 	rk_clrsetreg(&cru->clksel_con[63], I2C_CLK_REG_MASK(7),
 		     I2C_CLK_REG_VALUE(7, 4));
 
-	rkclk_set_pll(&cru->gpll_con[0], &rk3399_pll_rates[62]);
+	rk3399_pll_set_rate(&rk3399_pll_clks[GPLL], cru, GPLL, GPLL_HZ);
 }
 
 static int rk3399_clk_probe(struct udevice *dev)

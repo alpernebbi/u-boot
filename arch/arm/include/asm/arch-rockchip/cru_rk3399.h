@@ -110,15 +110,14 @@ enum cpu_cluster {
 };
 
 enum rk3399_pll_id {
-	APLLL_ID = 0,
-	APLLB_ID,
-	DPLL_ID,
-	CPLL_ID,
-	GPLL_ID,
-	NPLL_ID,
-	VPLL_ID,
-	PPLL_ID,
-	END_PLL_ID
+	APLLL,
+	APLLB,
+	DPLL,
+	CPLL,
+	GPLL,
+	NPLL,
+	VPLL,
+	PPLL,
 };
 
 struct rk3399_clk_info {
