@@ -23,6 +23,7 @@
 #include <dm/lists.h>
 #include <dt-bindings/clock/rk3399-cru.h>
 #include <linux/bitops.h>
+#include <div64.h>
 #include <linux/delay.h>
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -433,28 +434,68 @@ enum {
  *
  */
 
+#define RK3399_PLLCON0_FBDIV_MASK		0xfff
+#define RK3399_PLLCON0_FBDIV_SHIFT		0
+#define RK3399_PLLCON1_REFDIV_MASK		0x3f
+#define RK3399_PLLCON1_REFDIV_SHIFT		0
+#define RK3399_PLLCON1_POSTDIV1_MASK		0x7 << 8
+#define RK3399_PLLCON1_POSTDIV1_SHIFT		8
+#define RK3399_PLLCON1_POSTDIV2_MASK		0x7 << 12
+#define RK3399_PLLCON1_POSTDIV2_SHIFT		12
+#define RK3399_PLLCON2_FRAC_MASK		0xffffff
+#define RK3399_PLLCON2_FRAC_SHIFT		0
+#define RK3399_PLLCON2_LOCK_STATUS		BIT(31)
+#define RK3399_PLLCON3_PWRDOWN			BIT(0)
+#define RK3399_PLLCON3_DSMPD_MASK		0x1 << 3
+#define RK3399_PLLCON3_DSMPD_SHIFT		3
+
 static ulong rk3399_pll_get_rate(struct rockchip_pll_clock *pll,
 				 void __iomem *base, ulong pll_id)
 {
-	u32 *pll_con = base + pll->con_offset;
+	u32 refdiv, fbdiv, postdiv1, postdiv2, dsmpd, frac;
+	u32 con = 0, shift, mask;
+	ulong rate;
 
-	u32 refdiv, fbdiv, postdiv1, postdiv2;
-	u32 con;
+	/* normally done in rockchip_pll_get_rate() */
+	pll->mode_mask = PLL_MODE_MASK;
 
-	con = readl(&pll_con[3]);
-	switch ((con & PLL_MODE_MASK) >> PLL_MODE_SHIFT) {
-	case PLL_MODE_SLOW:
+	con = readl(base + pll->mode_offset);
+	shift = pll->mode_shift;
+	mask = pll->mode_mask << shift;
+
+	switch ((con & mask) >> shift) {
+	case RKCLK_PLL_MODE_SLOW:
 		return OSC_HZ;
-	case PLL_MODE_NORM:
+	case RKCLK_PLL_MODE_NORMAL:
 		/* normal mode */
-		con = readl(&pll_con[0]);
-		fbdiv = (con & PLL_FBDIV_MASK) >> PLL_FBDIV_SHIFT;
-		con = readl(&pll_con[1]);
-		postdiv1 = (con & PLL_POSTDIV1_MASK) >> PLL_POSTDIV1_SHIFT;
-		postdiv2 = (con & PLL_POSTDIV2_MASK) >> PLL_POSTDIV2_SHIFT;
-		refdiv = (con & PLL_REFDIV_MASK) >> PLL_REFDIV_SHIFT;
-		return (24 * fbdiv / (refdiv * postdiv1 * postdiv2)) * 1000000;
-	case PLL_MODE_DEEP:
+		con = readl(base + pll->con_offset);
+		fbdiv = (con & RK3399_PLLCON0_FBDIV_MASK) >>
+			RK3399_PLLCON0_FBDIV_SHIFT;
+		con = readl(base + pll->con_offset + 0x4);
+		refdiv = (con & RK3399_PLLCON1_REFDIV_MASK) >>
+			 RK3399_PLLCON1_REFDIV_SHIFT;
+		postdiv1 = (con & RK3399_PLLCON1_POSTDIV1_MASK) >>
+			   RK3399_PLLCON1_POSTDIV1_SHIFT;
+		postdiv2 = (con & RK3399_PLLCON1_POSTDIV2_MASK) >>
+			   RK3399_PLLCON1_POSTDIV2_SHIFT;
+		con = readl(base + pll->con_offset + 0x8);
+		frac = (con & RK3399_PLLCON2_FRAC_MASK) >>
+			RK3399_PLLCON2_FRAC_SHIFT;
+		con = readl(base + pll->con_offset + 0xc);
+		dsmpd = (con & RK3399_PLLCON3_DSMPD_MASK) >>
+			RK3399_PLLCON3_DSMPD_SHIFT;
+		rate = (24 * fbdiv / (refdiv * postdiv1 * postdiv2)) * 1000000;
+		if (dsmpd == 0) {
+			u64 frac_rate = OSC_HZ * (u64)frac;
+
+			do_div(frac_rate, refdiv);
+			frac_rate >>= 24;
+			do_div(frac_rate, postdiv1);
+			do_div(frac_rate, postdiv2);
+			rate += frac_rate;
+		}
+		return rate;
+	case RKCLK_PLL_MODE_DEEP:
 	default:
 		return 32768;
 	}
@@ -465,6 +506,10 @@ static int rk3399_pll_set_rate(struct rockchip_pll_clock *pll,
 			       ulong drate)
 {
 	const struct rockchip_pll_rate_table *rate;
+	u32 con;
+
+	/* normally done in rockchip_pll_get_rate() */
+	pll->mode_mask = PLL_MODE_MASK;
 
 	rate = rockchip_get_pll_settings(pll, drate);
 	if (!rate) {
@@ -477,52 +522,47 @@ static int rk3399_pll_set_rate(struct rockchip_pll_clock *pll,
 	debug("%s: rate settings for %lu postdiv2: %d, dsmpd: %d, frac: %d\n",
 	      __func__, rate->rate, rate->postdiv2, rate->dsmpd, rate->frac);
 
-	u32 *pll_con = base + pll->con_offset;
-
-	/* All 8 PLLs have same VCO and output frequency range restrictions. */
-	u32 vco_khz = OSC_HZ / 1000 * rate->fbdiv / rate->refdiv;
-	u32 output_khz = vco_khz / rate->postdiv1 / rate->postdiv2;
-
-	debug("PLL at %p: fbdiv=%d, refdiv=%d, postdiv1=%d, "
-			   "postdiv2=%d, vco=%u khz, output=%u khz\n",
-			   pll_con, rate->fbdiv, rate->refdiv, rate->postdiv1,
-			   rate->postdiv2, vco_khz, output_khz);
-	assert(vco_khz >= VCO_MIN_KHZ && vco_khz <= VCO_MAX_KHZ &&
-	       output_khz >= OUTPUT_MIN_KHZ && output_khz <= OUTPUT_MAX_KHZ &&
-	       rate->fbdiv >= PLL_DIV_MIN && rate->fbdiv <= PLL_DIV_MAX);
-
 	/*
 	 * When power on or changing PLL setting,
 	 * we must force PLL into slow mode to ensure output stable clock.
 	 */
-	rk_clrsetreg(&pll_con[3], PLL_MODE_MASK,
-		     PLL_MODE_SLOW << PLL_MODE_SHIFT);
+	rk_clrsetreg(base + pll->mode_offset,
+		     pll->mode_mask << pll->mode_shift,
+		     RKCLK_PLL_MODE_SLOW << pll->mode_shift);
 
-	/* use integer mode */
-	rk_clrsetreg(&pll_con[3], PLL_DSMPD_MASK,
-		     PLL_INTEGER_MODE << PLL_DSMPD_SHIFT);
+	rk_clrsetreg(base + pll->con_offset,
+		     RK3399_PLLCON0_FBDIV_MASK,
+		     rate->fbdiv << RK3399_PLLCON0_FBDIV_SHIFT);
 
-	rk_clrsetreg(&pll_con[0], PLL_FBDIV_MASK,
-		     rate->fbdiv << PLL_FBDIV_SHIFT);
-	rk_clrsetreg(&pll_con[1],
-		     PLL_POSTDIV2_MASK | PLL_POSTDIV1_MASK |
-		     PLL_REFDIV_MASK | PLL_REFDIV_SHIFT,
-		     (rate->postdiv2 << PLL_POSTDIV2_SHIFT) |
-		     (rate->postdiv1 << PLL_POSTDIV1_SHIFT) |
-		     (rate->refdiv << PLL_REFDIV_SHIFT));
+	rk_clrsetreg(base + pll->con_offset + 0x4,
+		     (RK3399_PLLCON1_REFDIV_MASK |
+		      RK3399_PLLCON1_POSTDIV1_MASK |
+		      RK3399_PLLCON1_POSTDIV2_MASK),
+		     (rate->refdiv << RK3399_PLLCON1_REFDIV_SHIFT |
+		      rate->postdiv1 << RK3399_PLLCON1_POSTDIV1_SHIFT |
+		      rate->postdiv2 << RK3399_PLLCON1_POSTDIV2_SHIFT));
+
+	/* CRU_*PLL_CON2 does not have write mask bits */
+	con = readl(base + pll->con_offset + 0x8);
+	con &= ~(RK3399_PLLCON2_FRAC_MASK << RK3399_PLLCON2_FRAC_SHIFT);
+	con |= (rate->frac << RK3399_PLLCON2_FRAC_SHIFT);
+	writel(con, base + pll->con_offset + 0x8);
+
+	rk_clrsetreg(base + pll->con_offset + 0xc,
+		     RK3399_PLLCON3_DSMPD_MASK,
+		     rate->dsmpd << RK3399_PLLCON3_DSMPD_SHIFT);
 
 	/* waiting for pll lock */
-	while (!(readl(&pll_con[2]) & (1 << PLL_LOCK_STATUS_SHIFT)))
+	while (!(readl(base + pll->con_offset + 0x8) & (1 << pll->lock_shift)))
 		udelay(1);
 
-	/* pll enter normal mode */
-	rk_clrsetreg(&pll_con[3], PLL_MODE_MASK,
-		     PLL_MODE_NORM << PLL_MODE_SHIFT);
-
-	debug("PLL at %p: con0=%x con1= %x con2= %x mode= %x\n",
+	rk_clrsetreg(base + pll->mode_offset, pll->mode_mask << pll->mode_shift,
+		     RKCLK_PLL_MODE_NORMAL << pll->mode_shift);
+	debug("PLL at %p: con0=%x con1= %x con2= %x con3= %x mode= %x\n",
 	      pll, readl(base + pll->con_offset),
 	      readl(base + pll->con_offset + 0x4),
 	      readl(base + pll->con_offset + 0x8),
+	      readl(base + pll->con_offset + 0xc),
 	      readl(base + pll->mode_offset));
 
 	return 0;
