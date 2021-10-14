@@ -41,26 +41,92 @@ struct rk3399_pmuclk_plat {
 	((input_rate) / (output_rate) - 1)
 #define DIV_TO_RATE(input_rate, div)		((input_rate) / ((div) + 1))
 
-#define PLL_DIVISORS(hz, _refdiv, _postdiv1, _postdiv2) {\
-	.refdiv = _refdiv,\
-	.fbdiv = (u32)((u64)hz * _refdiv * _postdiv1 * _postdiv2 / OSC_HZ),\
-	.postdiv1 = _postdiv1, .postdiv2 = _postdiv2, .rate = hz};
-
-#if !defined(CONFIG_SPL_BUILD)
-static const struct rockchip_pll_rate_table ppll_init_cfg = PLL_DIVISORS(PPLL_HZ, 3, 2, 1);
-#endif
-
-static const struct rockchip_pll_rate_table gpll_init_cfg = PLL_DIVISORS(GPLL_HZ, 1, 4, 1);
-static const struct rockchip_pll_rate_table cpll_init_cfg = PLL_DIVISORS(CPLL_HZ, 1, 3, 1);
-static const struct rockchip_pll_rate_table npll_init_cfg = PLL_DIVISORS(NPLL_HZ, 1, 3, 1);
-static const struct rockchip_pll_rate_table apll_1600_cfg = PLL_DIVISORS(1600*MHz, 3, 1, 1);
-static const struct rockchip_pll_rate_table apll_816_cfg = PLL_DIVISORS(816*MHz, 1, 2, 1);
-static const struct rockchip_pll_rate_table apll_600_cfg = PLL_DIVISORS(600*MHz, 1, 2, 1);
+static struct rockchip_pll_rate_table rk3399_pll_rates[] = {
+	/* _mhz, _refdiv, _fbdiv, _postdiv1, _postdiv2, _dsmpd, _frac */
+	RK3036_PLL_RATE(2208000000, 1, 92, 1, 1, 1, 0),
+	RK3036_PLL_RATE(2184000000, 1, 91, 1, 1, 1, 0),
+	RK3036_PLL_RATE(2160000000, 1, 90, 1, 1, 1, 0),
+	RK3036_PLL_RATE(2136000000, 1, 89, 1, 1, 1, 0),
+	RK3036_PLL_RATE(2112000000, 1, 88, 1, 1, 1, 0),
+	RK3036_PLL_RATE(2088000000, 1, 87, 1, 1, 1, 0),
+	RK3036_PLL_RATE(2064000000, 1, 86, 1, 1, 1, 0),
+	RK3036_PLL_RATE(2040000000, 1, 85, 1, 1, 1, 0),
+	RK3036_PLL_RATE(2016000000, 1, 84, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1992000000, 1, 83, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1968000000, 1, 82, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1944000000, 1, 81, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1920000000, 1, 80, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1896000000, 1, 79, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1872000000, 1, 78, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1848000000, 1, 77, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1824000000, 1, 76, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1800000000, 1, 75, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1776000000, 1, 74, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1752000000, 1, 73, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1728000000, 1, 72, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1704000000, 1, 71, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1680000000, 1, 70, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1656000000, 1, 69, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1632000000, 1, 68, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1608000000, 1, 67, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1600000000, 3, 200, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1584000000, 1, 66, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1560000000, 1, 65, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1536000000, 1, 64, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1512000000, 1, 63, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1488000000, 1, 62, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1464000000, 1, 61, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1440000000, 1, 60, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1416000000, 1, 59, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1392000000, 1, 58, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1368000000, 1, 57, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1344000000, 1, 56, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1320000000, 1, 55, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1296000000, 1, 54, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1272000000, 1, 53, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1248000000, 1, 52, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1200000000, 1, 50, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1188000000, 2, 99, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1104000000, 1, 46, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1100000000, 12, 550, 1, 1, 1, 0),
+	RK3036_PLL_RATE(1008000000, 1, 84, 2, 1, 1, 0),
+	RK3036_PLL_RATE(1000000000, 1, 125, 3, 1, 1, 0),
+	RK3036_PLL_RATE( 984000000, 1, 82, 2, 1, 1, 0),
+	RK3036_PLL_RATE( 960000000, 1, 80, 2, 1, 1, 0),
+	RK3036_PLL_RATE( 936000000, 1, 78, 2, 1, 1, 0),
+	RK3036_PLL_RATE( 912000000, 1, 76, 2, 1, 1, 0),
+	RK3036_PLL_RATE( 900000000, 4, 300, 2, 1, 1, 0),
+	RK3036_PLL_RATE( 888000000, 1, 74, 2, 1, 1, 0),
+	RK3036_PLL_RATE( 864000000, 1, 72, 2, 1, 1, 0),
+	RK3036_PLL_RATE( 840000000, 1, 70, 2, 1, 1, 0),
+	RK3036_PLL_RATE( 816000000, 1, 68, 2, 1, 1, 0),
+	RK3036_PLL_RATE( 800000000, 1, 100, 3, 1, 1, 0),
+	RK3036_PLL_RATE( 700000000, 6, 350, 2, 1, 1, 0),
+	RK3036_PLL_RATE( 696000000, 1, 58, 2, 1, 1, 0),
+	RK3036_PLL_RATE( 676000000, 3, 169, 2, 1, 1, 0),
+	RK3036_PLL_RATE( 600000000, 1, 75, 3, 1, 1, 0),
+	RK3036_PLL_RATE( 594000000, 1, 99, 4, 1, 1, 0),
+	RK3036_PLL_RATE( 533250000, 8, 711, 4, 1, 1, 0),
+	RK3036_PLL_RATE( 504000000, 1, 63, 3, 1, 1, 0),
+	RK3036_PLL_RATE( 500000000, 6, 250, 2, 1, 1, 0),
+	RK3036_PLL_RATE( 408000000, 1, 68, 2, 2, 1, 0),
+	RK3036_PLL_RATE( 312000000, 1, 52, 2, 2, 1, 0),
+	RK3036_PLL_RATE( 297000000, 1, 99, 4, 2, 1, 0),
+	RK3036_PLL_RATE( 216000000, 1, 72, 4, 2, 1, 0),
+	RK3036_PLL_RATE( 148500000, 1, 99, 4, 4, 1, 0),
+	RK3036_PLL_RATE( 106500000, 1, 71, 4, 4, 1, 0),
+	RK3036_PLL_RATE(  96000000, 1, 64, 4, 4, 1, 0),
+	RK3036_PLL_RATE(  74250000, 2, 99, 4, 4, 1, 0),
+	RK3036_PLL_RATE(  65000000, 1, 65, 6, 4, 1, 0),
+	RK3036_PLL_RATE(  54000000, 1, 54, 6, 4, 1, 0),
+	RK3036_PLL_RATE(  27000000, 1, 27, 6, 4, 1, 0),
+	{ /* sentinel */ },
+};
 
 static const struct rockchip_pll_rate_table *apll_cfgs[] = {
-	[APLL_1600_MHZ] = &apll_1600_cfg,
-	[APLL_816_MHZ] = &apll_816_cfg,
-	[APLL_600_MHZ] = &apll_600_cfg,
+	[APLL_1600_MHZ] = &rk3399_pll_rates[26],
+	[APLL_816_MHZ] = &rk3399_pll_rates[56],
+	[APLL_600_MHZ] = &rk3399_pll_rates[61],
 };
 
 #ifndef CONFIG_SPL_BUILD
@@ -1595,10 +1661,10 @@ static void rkclk_init(struct rockchip_cru *cru)
 	 * Please consider these three lines as a fix of bootrom bug.
 	 */
 	if (rkclk_pll_get_rate(&cru->npll_con[0]) != NPLL_HZ)
-		rkclk_set_pll(&cru->npll_con[0], &npll_init_cfg);
+		rkclk_set_pll(&cru->npll_con[0], &rk3399_pll_rates[47]);
 
 	if (rkclk_pll_get_rate(&cru->cpll_con[0]) != CPLL_HZ)
-		rkclk_set_pll(&cru->cpll_con[0], &cpll_init_cfg);
+		rkclk_set_pll(&cru->cpll_con[0], &rk3399_pll_rates[57]);
 
 	if (rkclk_pll_get_rate(&cru->gpll_con[0]) == GPLL_HZ)
 		return;
@@ -1688,7 +1754,7 @@ static void rkclk_init(struct rockchip_cru *cru)
 	rk_clrsetreg(&cru->clksel_con[63], I2C_CLK_REG_MASK(7),
 		     I2C_CLK_REG_VALUE(7, 4));
 
-	rkclk_set_pll(&cru->gpll_con[0], &gpll_init_cfg);
+	rkclk_set_pll(&cru->gpll_con[0], &rk3399_pll_rates[62]);
 }
 
 static int rk3399_clk_probe(struct udevice *dev)
@@ -1917,7 +1983,7 @@ static void pmuclk_init(struct rk3399_pmucru *pmucru)
 	u32 pclk_div;
 
 	/*  configure pmu pll(ppll) */
-	rkclk_set_pll(&pmucru->ppll_con[0], &ppll_init_cfg);
+	rkclk_set_pll(&pmucru->ppll_con[0], &rk3399_pll_rates[60]);
 
 	/*  configure pmu pclk */
 	pclk_div = PPLL_HZ / PMU_PCLK_HZ - 1;
