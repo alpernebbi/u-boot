@@ -37,15 +37,6 @@ struct rk3399_pmuclk_plat {
 };
 #endif
 
-struct pll_div {
-	u32 refdiv;
-	u32 fbdiv;
-	u32 postdiv1;
-	u32 postdiv2;
-	u32 frac;
-	u32 freq;
-};
-
 #define RATE_TO_DIV(input_rate, output_rate) \
 	((input_rate) / (output_rate) - 1)
 #define DIV_TO_RATE(input_rate, div)		((input_rate) / ((div) + 1))
@@ -53,20 +44,20 @@ struct pll_div {
 #define PLL_DIVISORS(hz, _refdiv, _postdiv1, _postdiv2) {\
 	.refdiv = _refdiv,\
 	.fbdiv = (u32)((u64)hz * _refdiv * _postdiv1 * _postdiv2 / OSC_HZ),\
-	.postdiv1 = _postdiv1, .postdiv2 = _postdiv2, .freq = hz};
+	.postdiv1 = _postdiv1, .postdiv2 = _postdiv2, .rate = hz};
 
 #if !defined(CONFIG_SPL_BUILD)
-static const struct pll_div ppll_init_cfg = PLL_DIVISORS(PPLL_HZ, 3, 2, 1);
+static const struct rockchip_pll_rate_table ppll_init_cfg = PLL_DIVISORS(PPLL_HZ, 3, 2, 1);
 #endif
 
-static const struct pll_div gpll_init_cfg = PLL_DIVISORS(GPLL_HZ, 1, 4, 1);
-static const struct pll_div cpll_init_cfg = PLL_DIVISORS(CPLL_HZ, 1, 3, 1);
-static const struct pll_div npll_init_cfg = PLL_DIVISORS(NPLL_HZ, 1, 3, 1);
-static const struct pll_div apll_1600_cfg = PLL_DIVISORS(1600*MHz, 3, 1, 1);
-static const struct pll_div apll_816_cfg = PLL_DIVISORS(816*MHz, 1, 2, 1);
-static const struct pll_div apll_600_cfg = PLL_DIVISORS(600*MHz, 1, 2, 1);
+static const struct rockchip_pll_rate_table gpll_init_cfg = PLL_DIVISORS(GPLL_HZ, 1, 4, 1);
+static const struct rockchip_pll_rate_table cpll_init_cfg = PLL_DIVISORS(CPLL_HZ, 1, 3, 1);
+static const struct rockchip_pll_rate_table npll_init_cfg = PLL_DIVISORS(NPLL_HZ, 1, 3, 1);
+static const struct rockchip_pll_rate_table apll_1600_cfg = PLL_DIVISORS(1600*MHz, 3, 1, 1);
+static const struct rockchip_pll_rate_table apll_816_cfg = PLL_DIVISORS(816*MHz, 1, 2, 1);
+static const struct rockchip_pll_rate_table apll_600_cfg = PLL_DIVISORS(600*MHz, 1, 2, 1);
 
-static const struct pll_div *apll_cfgs[] = {
+static const struct rockchip_pll_rate_table *apll_cfgs[] = {
 	[APLL_1600_MHZ] = &apll_1600_cfg,
 	[APLL_816_MHZ] = &apll_816_cfg,
 	[APLL_600_MHZ] = &apll_600_cfg,
@@ -370,19 +361,20 @@ static uint32_t rkclk_pll_get_rate(u32 *pll_con)
 	}
 }
 
-static void rkclk_set_pll(u32 *pll_con, const struct pll_div *div)
+static void rkclk_set_pll(u32 *pll_con,
+			  const struct rockchip_pll_rate_table *rate)
 {
 	/* All 8 PLLs have same VCO and output frequency range restrictions. */
-	u32 vco_khz = OSC_HZ / 1000 * div->fbdiv / div->refdiv;
-	u32 output_khz = vco_khz / div->postdiv1 / div->postdiv2;
+	u32 vco_khz = OSC_HZ / 1000 * rate->fbdiv / rate->refdiv;
+	u32 output_khz = vco_khz / rate->postdiv1 / rate->postdiv2;
 
 	debug("PLL at %p: fbdiv=%d, refdiv=%d, postdiv1=%d, "
 			   "postdiv2=%d, vco=%u khz, output=%u khz\n",
-			   pll_con, div->fbdiv, div->refdiv, div->postdiv1,
-			   div->postdiv2, vco_khz, output_khz);
+			   pll_con, rate->fbdiv, rate->refdiv, rate->postdiv1,
+			   rate->postdiv2, vco_khz, output_khz);
 	assert(vco_khz >= VCO_MIN_KHZ && vco_khz <= VCO_MAX_KHZ &&
 	       output_khz >= OUTPUT_MIN_KHZ && output_khz <= OUTPUT_MAX_KHZ &&
-	       div->fbdiv >= PLL_DIV_MIN && div->fbdiv <= PLL_DIV_MAX);
+	       rate->fbdiv >= PLL_DIV_MIN && rate->fbdiv <= PLL_DIV_MAX);
 
 	/*
 	 * When power on or changing PLL setting,
@@ -396,13 +388,13 @@ static void rkclk_set_pll(u32 *pll_con, const struct pll_div *div)
 		     PLL_INTEGER_MODE << PLL_DSMPD_SHIFT);
 
 	rk_clrsetreg(&pll_con[0], PLL_FBDIV_MASK,
-		     div->fbdiv << PLL_FBDIV_SHIFT);
+		     rate->fbdiv << PLL_FBDIV_SHIFT);
 	rk_clrsetreg(&pll_con[1],
 		     PLL_POSTDIV2_MASK | PLL_POSTDIV1_MASK |
 		     PLL_REFDIV_MASK | PLL_REFDIV_SHIFT,
-		     (div->postdiv2 << PLL_POSTDIV2_SHIFT) |
-		     (div->postdiv1 << PLL_POSTDIV1_SHIFT) |
-		     (div->refdiv << PLL_REFDIV_SHIFT));
+		     (rate->postdiv2 << PLL_POSTDIV2_SHIFT) |
+		     (rate->postdiv1 << PLL_POSTDIV1_SHIFT) |
+		     (rate->refdiv << PLL_REFDIV_SHIFT));
 
 	/* waiting for pll lock */
 	while (!(readl(&pll_con[2]) & (1 << PLL_LOCK_STATUS_SHIFT)))
@@ -449,7 +441,7 @@ static ulong rk3399_pll_get_rate(struct rk3399_clk_priv *priv,
 	return rkclk_pll_get_rate(pll_con);
 }
 
-static int pll_para_config(u32 freq_hz, struct pll_div *div)
+static int pll_para_config(u32 freq_hz, struct rockchip_pll_rate_table *rate)
 {
 	u32 ref_khz = OSC_HZ / KHz, refdiv, fbdiv = 0;
 	u32 postdiv1, postdiv2 = 1;
@@ -480,8 +472,8 @@ static int pll_para_config(u32 freq_hz, struct pll_div *div)
 		return -1;
 	}
 
-	div->postdiv1 = postdiv1;
-	div->postdiv2 = postdiv2;
+	rate->postdiv1 = postdiv1;
+	rate->postdiv2 = postdiv2;
 
 	best_diff_khz = vco_khz;
 	for (refdiv = 1; refdiv < max_refdiv && best_diff_khz; refdiv++) {
@@ -500,8 +492,8 @@ static int pll_para_config(u32 freq_hz, struct pll_div *div)
 			continue;
 
 		best_diff_khz = diff_khz;
-		div->refdiv = refdiv;
-		div->fbdiv = fbdiv;
+		rate->refdiv = refdiv;
+		rate->fbdiv = fbdiv;
 	}
 
 	if (best_diff_khz > 4 * (MHz / KHz)) {
@@ -537,7 +529,7 @@ void rk3399_configure_cpu(struct rockchip_cru *cru,
 		break;
 	}
 
-	apll_hz = apll_cfgs[freq]->freq;
+	apll_hz = apll_cfgs[freq]->rate;
 	rkclk_set_pll(pll_con, apll_cfgs[freq]);
 
 	aclkm_div = apll_hz / ACLKM_CORE_HZ - 1;
@@ -749,7 +741,7 @@ static ulong rk3399_spi_set_clk(struct rockchip_cru *cru, ulong clk_id, uint hz)
 
 static ulong rk3399_vop_set_clk(struct rockchip_cru *cru, ulong clk_id, u32 hz)
 {
-	struct pll_div vpll_config = {0}, cpll_config = {0};
+	struct rockchip_pll_rate_table vpll_config = {0}, cpll_config = {0};
 	int aclk_vop = RK3399_LIMIT_PLL_ACLK_VOP;
 	void *aclkreg_addr, *dclkreg_addr;
 	u32 div = 1;
@@ -909,7 +901,7 @@ static ulong rk3399_gmac_set_clk(struct rockchip_cru *cru, ulong rate)
 static ulong rk3399_ddr_set_clk(struct rockchip_cru *cru,
 				ulong set_rate)
 {
-	struct pll_div dpll_cfg;
+	struct rockchip_pll_rate_table dpll_cfg;
 
 	/*  IC ECO bug, need to set this register */
 	writel(0xc000c000, PMUSGRF_DDR_RGN_CON16);
@@ -917,31 +909,31 @@ static ulong rk3399_ddr_set_clk(struct rockchip_cru *cru,
 	/*  clk_ddrc == DPLL = 24MHz / refdiv * fbdiv / postdiv1 / postdiv2 */
 	switch (set_rate) {
 	case 50 * MHz:
-		dpll_cfg = (struct pll_div)
+		dpll_cfg = (struct rockchip_pll_rate_table)
 		{.refdiv = 1, .fbdiv = 12, .postdiv1 = 3, .postdiv2 = 2};
 		break;
 	case 200 * MHz:
-		dpll_cfg = (struct pll_div)
+		dpll_cfg = (struct rockchip_pll_rate_table)
 		{.refdiv = 1, .fbdiv = 50, .postdiv1 = 6, .postdiv2 = 1};
 		break;
 	case 300 * MHz:
-		dpll_cfg = (struct pll_div)
+		dpll_cfg = (struct rockchip_pll_rate_table)
 		{.refdiv = 2, .fbdiv = 100, .postdiv1 = 4, .postdiv2 = 1};
 		break;
 	case 400 * MHz:
-		dpll_cfg = (struct pll_div)
+		dpll_cfg = (struct rockchip_pll_rate_table)
 		{.refdiv = 1, .fbdiv = 50, .postdiv1 = 3, .postdiv2 = 1};
 		break;
 	case 666 * MHz:
-		dpll_cfg = (struct pll_div)
+		dpll_cfg = (struct rockchip_pll_rate_table)
 		{.refdiv = 2, .fbdiv = 111, .postdiv1 = 2, .postdiv2 = 1};
 		break;
 	case 800 * MHz:
-		dpll_cfg = (struct pll_div)
+		dpll_cfg = (struct rockchip_pll_rate_table)
 		{.refdiv = 1, .fbdiv = 100, .postdiv1 = 3, .postdiv2 = 1};
 		break;
 	case 933 * MHz:
-		dpll_cfg = (struct pll_div)
+		dpll_cfg = (struct rockchip_pll_rate_table)
 		{.refdiv = 1, .fbdiv = 116, .postdiv1 = 3, .postdiv2 = 1};
 		break;
 	default:
