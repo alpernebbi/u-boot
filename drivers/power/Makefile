@@ -7,6 +7,7 @@ obj-$(CONFIG_$(SPL_TPL_)ACPI_PMC) += acpi_pmc/
 obj-$(CONFIG_$(SPL_TPL_)POWER_DOMAIN) += domain/
 obj-y += pmic/
 obj-y += regulator/
+obj-y += io-domain/
 
 obj-$(CONFIG_AXP152_POWER)	+= axp152.o
 obj-$(CONFIG_AXP209_POWER)	+= axp209.o

@@ -34,6 +34,9 @@
 #include <asm/arch-rockchip/clock.h>
 #include <asm/arch-rockchip/periph.h>
 #include <power/regulator.h>
+#ifdef CONFIG_ROCKCHIP_IO_DOMAIN
+#include <io-domain.h>
+#endif
 
 #if IS_ENABLED(CONFIG_EFI_HAVE_CAPSULE_SUPPORT) && IS_ENABLED(CONFIG_EFI_PARTITION)
 
@@ -208,6 +211,10 @@ int board_init(void)
 	ret = regulators_enable_boot_on(false);
 	if (ret)
 		debug("%s: Cannot enable boot on regulator\n", __func__);
+#endif
+
+#ifdef CONFIG_ROCKCHIP_IO_DOMAIN
+	io_domain_init();
 #endif
 
 	return 0;

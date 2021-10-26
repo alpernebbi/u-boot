@@ -47,6 +47,8 @@ source "drivers/power/acpi_pmc/Kconfig"
 
 source "drivers/power/domain/Kconfig"
 
+source "drivers/power/io-domain/Kconfig"
+
 source "drivers/power/pmic/Kconfig"
 
 source "drivers/power/regulator/Kconfig"
