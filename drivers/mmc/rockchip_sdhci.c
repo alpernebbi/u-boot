@@ -45,6 +45,14 @@
 #define ARASAN_VENDOR_REGISTER		0x78
 #define ARASAN_VENDOR_ENHANCED_STROBE	BIT(0)
 
+/* DWC IP vendor area 1 pointer */
+#define DWCMSHC_P_VENDOR_AREA1		0xe8
+#define DWCMSHC_AREA1_MASK		GENMASK(11, 0)
+/* Offset inside the vendor area 1 */
+#define DWCMSHC_EMMC_CONTROL		0x2c
+#define DWCMSHC_CARD_IS_EMMC		BIT(0)
+#define DWCMSHC_ENHANCED_STROBE		BIT(8)
+
 /* Rockchip specific Registers */
 #define DWCMSHC_EMMC_DLL_CTRL		0x800
 #define DWCMSHC_EMMC_DLL_CTRL_RESET	BIT(1)
@@ -244,10 +252,24 @@ static int rk3568_emmc_phy_init(struct udevice *dev)
 {
 	struct rockchip_sdhc *prv = dev_get_priv(dev);
 	struct sdhci_host *host = &prv->host;
+	struct mmc *mmc = host->mmc;
 	u32 extra;
+	u32 vendor;
+	int reg;
 
 	extra = DLL_RXCLK_NO_INVERTER << DWCMSHC_EMMC_DLL_RXCLK_SRCSEL;
 	sdhci_writel(host, extra, DWCMSHC_EMMC_DLL_RXCLK);
+
+	/* set CARD_IS_EMMC bit to enable Data Strobe for HS400 and HS400ES */
+	reg = (sdhci_readl(host, DWCMSHC_P_VENDOR_AREA1) & DWCMSHC_AREA1_MASK)
+	      + DWCMSHC_EMMC_CONTROL;
+
+	vendor = sdhci_readw(host, reg);
+	if (IS_MMC(mmc))
+		vendor |= DWCMSHC_CARD_IS_EMMC;
+	else
+		vendor &= ~DWCMSHC_CARD_IS_EMMC;
+	sdhci_writew(host, vendor, reg);
 
 	return 0;
 }
@@ -308,6 +330,25 @@ static int rk3568_sdhci_emmc_set_clock(struct sdhci_host *host, unsigned int clo
 
 static int rk3568_emmc_get_phy(struct udevice *dev)
 {
+	return 0;
+}
+
+static int rk3568_sdhci_set_enhanced_strobe(struct sdhci_host *host)
+{
+	struct mmc *mmc = host->mmc;
+	u32 vendor;
+	int reg;
+
+	reg = (sdhci_readl(host, DWCMSHC_P_VENDOR_AREA1) & DWCMSHC_AREA1_MASK)
+	      + DWCMSHC_EMMC_CONTROL;
+
+	vendor = sdhci_readl(host, reg);
+	if (mmc->selected_mode == MMC_HS_400_ES)
+		vendor |= DWCMSHC_ENHANCED_STROBE;
+	else
+		vendor &= ~DWCMSHC_ENHANCED_STROBE;
+	sdhci_writel(host, vendor, reg);
+
 	return 0;
 }
 
@@ -519,6 +560,7 @@ static const struct sdhci_data rk3568_data = {
 	.get_phy = rk3568_emmc_get_phy,
 	.emmc_phy_init = rk3568_emmc_phy_init,
 	.set_ios_post = rk3568_sdhci_set_ios_post,
+	.set_enhanced_strobe = rk3568_sdhci_set_enhanced_strobe,
 };
 
 static const struct udevice_id sdhci_ids[] = {
