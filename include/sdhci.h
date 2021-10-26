@@ -272,6 +272,7 @@ struct sdhci_ops {
 	int (*platform_execute_tuning)(struct mmc *host, u8 opcode);
 	int (*set_delay)(struct sdhci_host *host);
 	int	(*deferred_probe)(struct sdhci_host *host);
+	int	(*set_enhanced_strobe)(struct sdhci_host *host);
 };
 
 #define ADMA_MAX_LEN	65532
