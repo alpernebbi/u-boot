@@ -11,10 +11,63 @@
 #include <dm/device_compat.h>
 #include <dm/devres.h>
 #include <generic-phy.h>
+#include <linux/list.h>
+
+struct phy_id_priv {
+	unsigned long id;
+	int power_on_count;
+	int init_count;
+	struct list_head list;
+};
 
 static inline struct phy_ops *phy_dev_ops(struct udevice *dev)
 {
 	return (struct phy_ops *)dev->driver->ops;
+}
+
+static struct phy_id_priv *phy_get_uclass_priv(struct phy *phy)
+{
+	struct list_head *uc_priv;
+	struct phy_id_priv *id_priv;
+
+	if (!generic_phy_valid(phy))
+		return NULL;
+
+	uc_priv = dev_get_uclass_priv(phy->dev);
+	list_for_each_entry(id_priv, uc_priv, list)
+		if (id_priv->id == phy->id)
+			return id_priv;
+
+	id_priv = kzalloc(sizeof(*id_priv), GFP_KERNEL);
+	if (!id_priv)
+		return NULL;
+
+	id_priv->id = phy->id;
+	id_priv->power_on_count = 0;
+	id_priv->init_count = 0;
+	list_add(&id_priv->list, uc_priv);
+
+	return id_priv;
+}
+
+static int phy_uclass_pre_probe(struct udevice *dev)
+{
+	struct list_head *uc_priv = dev_get_uclass_priv(dev);
+
+	INIT_LIST_HEAD(uc_priv);
+
+	return 0;
+}
+
+static int phy_uclass_pre_remove(struct udevice *dev)
+{
+	struct list_head *uc_priv = dev_get_uclass_priv(dev);
+	struct phy_id_priv *id_priv, *next;
+
+	list_for_each_entry_safe(id_priv, next, uc_priv, list)
+		kfree(id_priv);
+
+	return 0;
 }
 
 static int generic_phy_xlate_offs_flags(struct phy *phy,
@@ -118,6 +171,7 @@ int generic_phy_get_by_name(struct udevice *dev, const char *phy_name,
 
 int generic_phy_init(struct phy *phy)
 {
+	struct phy_id_priv *id_priv;
 	struct phy_ops const *ops;
 	int ret;
 
@@ -126,10 +180,19 @@ int generic_phy_init(struct phy *phy)
 	ops = phy_dev_ops(phy->dev);
 	if (!ops->init)
 		return 0;
+
+	id_priv = phy_get_uclass_priv(phy);
+	if (id_priv && id_priv->init_count > 0) {
+		id_priv->init_count++;
+		return 0;
+	}
+
 	ret = ops->init(phy);
 	if (ret)
 		dev_err(phy->dev, "PHY: Failed to init %s: %d.\n",
 			phy->dev->name, ret);
+	else if (id_priv)
+		id_priv->init_count = 1;
 
 	return ret;
 }
@@ -154,6 +217,7 @@ int generic_phy_reset(struct phy *phy)
 
 int generic_phy_exit(struct phy *phy)
 {
+	struct phy_id_priv *id_priv;
 	struct phy_ops const *ops;
 	int ret;
 
@@ -162,16 +226,30 @@ int generic_phy_exit(struct phy *phy)
 	ops = phy_dev_ops(phy->dev);
 	if (!ops->exit)
 		return 0;
+
+	id_priv = phy_get_uclass_priv(phy);
+	if (id_priv) {
+		if (id_priv->init_count == 0)
+			return 0;
+		if (id_priv->init_count > 1) {
+			id_priv->init_count--;
+			return 0;
+		}
+	}
+
 	ret = ops->exit(phy);
 	if (ret)
 		dev_err(phy->dev, "PHY: Failed to exit %s: %d.\n",
 			phy->dev->name, ret);
+	else if (id_priv)
+		id_priv->init_count = 0;
 
 	return ret;
 }
 
 int generic_phy_power_on(struct phy *phy)
 {
+	struct phy_id_priv *id_priv;
 	struct phy_ops const *ops;
 	int ret;
 
@@ -180,16 +258,26 @@ int generic_phy_power_on(struct phy *phy)
 	ops = phy_dev_ops(phy->dev);
 	if (!ops->power_on)
 		return 0;
+
+	id_priv = phy_get_uclass_priv(phy);
+	if (id_priv && id_priv->power_on_count > 0) {
+		id_priv->power_on_count++;
+		return 0;
+	}
+
 	ret = ops->power_on(phy);
 	if (ret)
 		dev_err(phy->dev, "PHY: Failed to power on %s: %d.\n",
 			phy->dev->name, ret);
+	else if (id_priv)
+		id_priv->power_on_count = 1;
 
 	return ret;
 }
 
 int generic_phy_power_off(struct phy *phy)
 {
+	struct phy_id_priv *id_priv;
 	struct phy_ops const *ops;
 	int ret;
 
@@ -198,10 +286,23 @@ int generic_phy_power_off(struct phy *phy)
 	ops = phy_dev_ops(phy->dev);
 	if (!ops->power_off)
 		return 0;
+
+	id_priv = phy_get_uclass_priv(phy);
+	if (id_priv) {
+		if (id_priv->power_on_count == 0)
+			return 0;
+		if (id_priv->power_on_count > 1) {
+			id_priv->power_on_count--;
+			return 0;
+		}
+	}
+
 	ret = ops->power_off(phy);
 	if (ret)
 		dev_err(phy->dev, "PHY: Failed to power off %s: %d.\n",
 			phy->dev->name, ret);
+	else if (id_priv)
+		id_priv->power_on_count = 0;
 
 	return ret;
 }
@@ -316,4 +417,7 @@ int generic_phy_power_off_bulk(struct phy_bulk *bulk)
 UCLASS_DRIVER(phy) = {
 	.id		= UCLASS_PHY,
 	.name		= "phy",
+	.pre_probe	= phy_uclass_pre_probe,
+	.pre_remove	= phy_uclass_pre_remove,
+	.per_device_auto = sizeof(struct list_head),
 };
