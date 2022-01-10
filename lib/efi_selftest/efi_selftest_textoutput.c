@@ -123,6 +123,17 @@ static int execute(void)
 		efi_st_error("OutputString failed for international chars\n");
 		return EFI_ST_FAILURE;
 	}
+	ret  = con_out->output_string(con_out, L"┌─┬─┐\n");
+	ret |= con_out->output_string(con_out, L"│ │ │\n");
+	ret |= con_out->output_string(con_out, L"├─┼─┤\n");
+	ret |= con_out->output_string(con_out, L"│ │ │\n");
+	ret |= con_out->output_string(con_out, L"└─┴─┘\n");
+	if (ret != EFI_ST_SUCCESS) {
+		efi_st_error("OutputString failed for box drawing chars\n");
+		return EFI_ST_FAILURE;
+	}
+	con_out->output_string(con_out, L"waiting for admiration...\n");
+	EFI_CALL(systab.boottime->stall(3000000));
 	efi_st_printf("\n");
 
 	return EFI_ST_SUCCESS;
