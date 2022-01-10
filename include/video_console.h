@@ -83,6 +83,7 @@ struct vidconsole_priv {
 	int escape_len;
 	int row_saved;
 	int col_saved;
+	u32 ucs;
 	bool cursor_visible;
 	char escape_buf[32];
 };
@@ -305,5 +306,13 @@ static inline int vidconsole_memmove(struct udevice *dev, void *dst,
 }
 
 #endif
+
+/*
+ * Convert an UTF-8 byte into the corresponding character in the CP437
+ * code page. Returns 0 if that character is part of a multi-byte sequence.
+ * for which *esc holds the state of. Repeatedly feed in more bytes until
+ * the return value returns a non-0 character.
+ */
+uint8_t convert_utf8_to_cp437(uint8_t c, uint32_t *esc);
 
 #endif
