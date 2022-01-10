@@ -15,6 +15,9 @@ config VIDEO_FONT_8X16
 config VIDEO_FONT_SUN12X22
         bool "Sun 12x22 font"
 
+config VIDEO_FONT_TER16X32
+        bool "Terminus 16x32 font"
+
 endchoice
 
 menu "TrueType Fonts"
