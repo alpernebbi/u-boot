@@ -46,7 +46,7 @@ __END__;
 #define VIDEO_FONT_HEIGHT	6
 #define VIDEO_FONT_SIZE		(VIDEO_FONT_CHARS * VIDEO_FONT_HEIGHT)
 
-static unsigned char video_fontdata[VIDEO_FONT_SIZE] = {
+static unsigned char __maybe_unused video_fontdata[VIDEO_FONT_SIZE] = {
 
 	/*{*/
 		/*   Char 0: ' '  */

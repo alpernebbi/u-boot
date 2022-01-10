@@ -2,6 +2,18 @@
 # Video fonts
 #
 
+choice
+	prompt "Bitmap font for framebuffers"
+	default VIDEO_FONT_8X16
+
+config VIDEO_FONT_4X6
+        bool "Tiny 4x6 font"
+
+config VIDEO_FONT_8X16
+	bool "Standard VGA font"
+
+endchoice
+
 menu "TrueType Fonts"
 
 config CONSOLE_TRUETYPE_NIMBUS
