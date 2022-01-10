@@ -30,6 +30,7 @@ static int console_set_font(struct udevice *dev, struct video_fontdata *fontdata
 	debug("height: %d\n", fontdata->height);
 
 	priv->fontdata = fontdata;
+	vc_priv->cursor_visible = true;
 	vc_priv->x_charsize = fontdata->width;
 	vc_priv->y_charsize = fontdata->height;
 	if (vid_priv->rot % 2) {
