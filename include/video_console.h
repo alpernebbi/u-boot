@@ -66,6 +66,7 @@ struct vidconsole_priv {
 	int escape_len;
 	int row_saved;
 	int col_saved;
+	bool cursor_visible;
 	char escape_buf[32];
 	char utf8_buf[5];
 };
