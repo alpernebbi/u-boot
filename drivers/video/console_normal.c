@@ -160,6 +160,7 @@ static int console_normal_probe(struct udevice *dev)
 	vc_priv->y_charsize = VIDEO_FONT_HEIGHT;
 	vc_priv->cols = vid_priv->xsize / VIDEO_FONT_WIDTH;
 	vc_priv->rows = vid_priv->ysize / VIDEO_FONT_HEIGHT;
+	vc_priv->cursor_visible = true;
 
 	return 0;
 }
