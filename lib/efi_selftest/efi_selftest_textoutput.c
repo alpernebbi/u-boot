@@ -118,6 +118,11 @@ static int execute(void)
 		efi_st_printf("Unicode not handled properly\n");
 		return EFI_ST_FAILURE;
 	}
+	ret = con_out->output_string(con_out, L"Österreich Edelweiß Smørrebrød Smörgås Niño René >Ἑλλάς<\n");
+	if (ret != EFI_ST_SUCCESS) {
+		efi_st_error("OutputString failed for international chars\n");
+		return EFI_ST_FAILURE;
+	}
 	efi_st_printf("\n");
 
 	return EFI_ST_SUCCESS;
