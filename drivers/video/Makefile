@@ -20,6 +20,7 @@ obj-$(CONFIG_DISPLAY) += display-uclass.o
 obj-$(CONFIG_VIDEO_MIPI_DSI) += dsi-host-uclass.o
 obj-$(CONFIG_$(SPL_TPL_)VIDEO) += video-uclass.o vidconsole-uclass.o
 obj-$(CONFIG_$(SPL_TPL_)VIDEO) += video_bmp.o
+obj-$(CONFIG_$(SPL_TPL_)VIDEO) += utf8_cp437.o
 obj-$(CONFIG_$(SPL_TPL_)PANEL) += panel-uclass.o
 obj-$(CONFIG_PANEL_HX8238D) += hx8238d.o
 obj-$(CONFIG_$(SPL_TPL_)SIMPLE_PANEL) += simple_panel.o

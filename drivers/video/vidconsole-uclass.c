@@ -454,6 +454,7 @@ static int vidconsole_output_glyph(struct udevice *dev, char ch)
 int vidconsole_put_char(struct udevice *dev, char ch)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
+	uint8_t cp437;
 	int ret;
 
 	if (priv->escape) {
@@ -488,7 +489,10 @@ int vidconsole_put_char(struct udevice *dev, char ch)
 		priv->last_ch = 0;
 		break;
 	default:
-		ret = vidconsole_output_glyph(dev, ch);
+		cp437 = convert_utf8_to_cp437(ch, &priv->ucs);
+		if (cp437 == 0)
+			return 0;
+		ret = vidconsole_output_glyph(dev, cp437);
 		if (ret < 0)
 			return ret;
 		break;
