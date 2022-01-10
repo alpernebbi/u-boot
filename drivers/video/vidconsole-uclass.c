@@ -70,12 +70,34 @@ static int vidconsole_entry_start(struct udevice *dev)
 	return ops->entry_start(dev);
 }
 
+static void draw_cursor(struct udevice *dev, bool state)
+{
+	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
+	struct video_priv *vid_priv = dev_get_uclass_priv(dev->parent);
+	u32 tmp;
+
+	if (!priv->cursor_visible)
+		return;
+
+	if (state) {
+		tmp = vid_priv->colour_bg;
+		vid_priv->colour_bg = vid_priv->colour_fg;
+	}
+
+	vidconsole_putc_xy(dev, priv->xcur_frac, priv->ycur, ' ');
+
+	if (state)
+		vid_priv->colour_bg = tmp;
+}
+
 /* Move backwards one space */
 static int vidconsole_back(struct udevice *dev)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
 	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
 	int ret;
+
+	draw_cursor(dev, false);
 
 	if (ops->backspace) {
 		ret = ops->backspace(dev);
@@ -102,6 +124,8 @@ static void vidconsole_newline(struct udevice *dev)
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid_dev);
 	const int rows = CONFIG_CONSOLE_SCROLL_LINES;
 	int i, ret;
+
+	draw_cursor(dev, false);
 
 	priv->xcur_frac = priv->xstart_frac;
 	priv->ycur += priv->y_charsize;
@@ -342,6 +366,14 @@ static void vidconsole_escape_char(struct udevice *dev, char ch)
 
 		break;
 	}
+	case 'l':
+		  draw_cursor(dev, false);
+		  priv->cursor_visible = 0;
+		  break;
+	case 'h':
+		  priv->cursor_visible = 1;
+		  draw_cursor(dev, true);
+		  break;
 	case 'J': {
 		int mode;
 
@@ -516,6 +548,11 @@ int vidconsole_put_char(struct udevice *dev, char ch)
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
 	int ret;
 
+	/*
+	 * We don't need to clear the cursor since we are going to overwrite
+	 * that character anyway.
+	 */
+
 	if (priv->escape) {
 		vidconsole_escape_char(dev, ch);
 		return 0;
@@ -530,6 +567,7 @@ int vidconsole_put_char(struct udevice *dev, char ch)
 		/* beep */
 		break;
 	case '\r':
+		draw_cursor(dev, false);
 		priv->xcur_frac = priv->xstart_frac;
 		break;
 	case '\n':
@@ -537,6 +575,7 @@ int vidconsole_put_char(struct udevice *dev, char ch)
 		vidconsole_entry_start(dev);
 		break;
 	case '\t':	/* Tab (8 chars alignment) */
+		draw_cursor(dev, false);
 		priv->xcur_frac = ((priv->xcur_frac / priv->tab_width_frac)
 				+ 1) * priv->tab_width_frac;
 
@@ -553,6 +592,8 @@ int vidconsole_put_char(struct udevice *dev, char ch)
 			return ret;
 		break;
 	}
+
+	draw_cursor(dev, true);
 
 	return 0;
 }
@@ -620,6 +661,7 @@ static int vidconsole_pre_probe(struct udevice *dev)
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid);
 
 	priv->xsize_frac = VID_TO_POS(vid_priv->xsize);
+	priv->cursor_visible = false;
 
 	return 0;
 }
