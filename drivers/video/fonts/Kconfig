@@ -12,6 +12,9 @@ config VIDEO_FONT_4X6
 config VIDEO_FONT_8X16
 	bool "Standard VGA font"
 
+config VIDEO_FONT_SUN12X22
+        bool "Sun 12x22 font"
+
 endchoice
 
 menu "TrueType Fonts"
