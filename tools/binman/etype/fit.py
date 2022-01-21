@@ -9,11 +9,12 @@ from collections import defaultdict, OrderedDict
 import libfdt
 
 from binman.entry import Entry, EntryArg
+from binman.etype.section import Entry_section
 from dtoc import fdt_util
 from dtoc.fdt import Fdt
 from patman import tools
 
-class Entry_fit(Entry):
+class Entry_fit(Entry_section):
     """Flat Image Tree (FIT)
 
     This calls mkimage to create a FIT (U-Boot Flat Image Tree) based on the
@@ -112,15 +113,16 @@ class Entry_fit(Entry):
         """
         Members:
             _fit: FIT file being built
-            _fit_sections: dict:
+            _entries: dict from Entry_section:
                 key: relative path to entry Node (from the base of the FIT)
                 value: Entry_section object comprising the contents of this
                     node
         """
         super().__init__(section, etype, node)
         self._fit = None
-        self._fit_sections = {}
+        self._fdt = None
         self._fit_props = {}
+
         for pname, prop in self._node.props.items():
             if pname.startswith('fit,'):
                 self._fit_props[pname] = prop
@@ -185,7 +187,7 @@ class Entry_fit(Entry):
                 # 'data' property later.
                 entry = Entry.Create(self.section, node, etype='section')
                 entry.ReadNode()
-                self._fit_sections[rel_path] = entry
+                self._entries[rel_path] = entry
 
             for subnode in node.subnodes:
                 if has_images and not (subnode.name.startswith('hash') or
@@ -234,16 +236,26 @@ class Entry_fit(Entry):
 
         # Pack this new FDT and scan it so we can add the data later
         fdt.pack()
-        self._fdt = Fdt.FromData(fdt.as_bytearray())
-        self._fdt.Scan()
+        self._fit = Fdt.FromData(fdt.as_bytearray())
+        self._fit.Scan()
 
-    def ObtainContents(self):
-        """Obtain the contents of the FIT
+    def BuildSectionData(self, required):
+        """Build FIT entry contents
 
         This adds the 'data' properties to the input ITB (Image-tree Binary)
         then runs mkimage to process it.
+
+        Args:
+            required: True if the data must be present, False if it is OK to
+                return None
+
+        Returns:
+            Contents of the section (bytes)
         """
-        # self._BuildInput() either returns bytes or raises an exception.
+        # Work on a copy of the FIT spec we read
+        self._fdt = Fdt.FromData(self._fit.GetContents())
+        self._fdt.Scan()
+
         data = self._BuildInput(self._fdt)
         uniq = self.GetUniqueName()
         input_fname = tools.GetOutputFilename('%s.itb' % uniq)
@@ -260,13 +272,13 @@ class Entry_fit(Entry):
                 }
         if self.mkimage.run(reset_timestamp=True, output_fname=output_fname,
                             **args) is not None:
-            self.SetContents(tools.ReadFile(output_fname))
-        else:
-            # Bintool is missing; just use empty data as the output
-            self.record_missing_bintool(self.mkimage)
-            self.SetContents(tools.GetBytes(0, 1024))
+            self._fdt = Fdt.FromData(tools.ReadFile(output_fname))
+            self._fdt.Scan()
+            return self._fdt.GetContents()
 
-        return True
+        # Bintool is missing; just use empty data as the output
+        self.record_missing_bintool(self.mkimage)
+        return tools.GetBytes(0, 1024)
 
     def _BuildInput(self, fdt):
         """Finish the FIT by adding the 'data' properties to it
@@ -277,12 +289,8 @@ class Entry_fit(Entry):
         Returns:
             New fdt contents (bytes)
         """
-        for path, section in self._fit_sections.items():
+        for path, section in self._entries.items():
             node = fdt.GetNode(path)
-            # Entry_section.ObtainContents() either returns True or
-            # raises an exception.
-            section.ObtainContents()
-            section.Pack(0)
             data = section.GetData()
             node.AddData('data', data)
 
@@ -290,20 +298,49 @@ class Entry_fit(Entry):
         data = fdt.GetContents()
         return data
 
-    def CheckMissing(self, missing_list):
-        """Check if any entries in this FIT have missing external blobs
+    def SetImagePos(self, image_pos):
+        """Set the position in the image
 
-        If there are missing blobs, the entries are added to the list
+        This sets each subentry's offsets, sizes and positions-in-image
+        according to where they ended up in the packed FIT file.
 
         Args:
-            missing_list: List of Entry objects to be added to
+            image_pos: Position of this entry in the image
         """
-        for path, section in self._fit_sections.items():
-            section.CheckMissing(missing_list)
+        super().SetImagePos(image_pos)
 
-    def SetAllowMissing(self, allow_missing):
-        for section in self._fit_sections.values():
-            section.SetAllowMissing(allow_missing)
+        for path, section in self._entries.items():
+            node = self._fdt.GetNode(path)
+
+            data_prop = node.props.get("data")
+            data_pos = fdt_util.GetInt(node, "data-position")
+            data_offset = fdt_util.GetInt(node, "data-offset")
+            data_size = fdt_util.GetInt(node, "data-size")
+
+            # Contents are inside the FIT
+            if data_prop is not None:
+                # GetOffset() returns offset of a fdt_property struct,
+                # which has 3 fdt32_t members before the actual data.
+                offset = data_prop.GetOffset() + 12
+                size = len(data_prop.bytes)
+
+            # External offset from the base of the FIT
+            elif data_pos is not None:
+                offset = data_pos
+                size = data_size
+
+            # External offset from the end of the FIT
+            elif data_offset is not None:
+                offset = self._fdt.GetFdtObj().totalsize() + data_offset
+                size = data_size
+
+            # This should never happen
+            else:
+                self.Raise("%s: missing data props" % (path))
+
+            section.SetOffsetSize(offset, size)
+            section.SetImagePos(image_pos)
 
     def AddBintools(self, tools):
+        super().AddBintools(tools)
         self.mkimage = self.AddBintool(tools, 'mkimage')
