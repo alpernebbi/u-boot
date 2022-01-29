@@ -152,7 +152,7 @@ if args.cmd == 'test':
         suite = doctest.DocTestSuite(module)
         suite.run(result)
 
-    sys.exit(test_util.ReportResult('patman', args.testname, result))
+    sys.exit(test_util.report_result('patman', args.testname, result))
 
 # Process commits, produce patches files, check them, email them
 elif args.cmd == 'send':
