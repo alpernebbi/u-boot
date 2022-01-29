@@ -22,7 +22,7 @@ from buildman import toolchain
 from patman import command
 from patman import gitutil
 from patman import terminal
-from patman.terminal import Tprint
+from patman.terminal import tprint
 
 # This indicates an new int or hex Kconfig property with no default
 # It hangs the build since the 'conf' tool cannot proceed without valid input.
@@ -497,7 +497,7 @@ class Builder:
             if result.already_done:
                 self.already_done += 1
             if self._verbose:
-                terminal.PrintClear()
+                terminal.print_clear()
                 boards_selected = {target : result.brd}
                 self.ResetResultSummary(boards_selected)
                 self.ProduceResultSummary(result.commit_upto, self.commits,
@@ -524,8 +524,8 @@ class Builder:
             line += '%s  : ' % self._complete_delay
 
         line += target
-        terminal.PrintClear()
-        Tprint(line, newline=False, limit_to_line=True)
+        terminal.print_clear()
+        tprint(line, newline=False, limit_to_line=True)
 
     def _GetOutputDir(self, commit_upto):
         """Get the name of the output directory for a commit number
@@ -655,7 +655,7 @@ class Builder:
                 if line.strip():
                     size, type, name = line[:-1].split()
             except:
-                Tprint("Invalid line in file '%s': '%s'" % (fname, line[:-1]))
+                tprint("Invalid line in file '%s': '%s'" % (fname, line[:-1]))
                 continue
             if type in 'tTdDbB':
                 # function names begin with '.' on 64-bit powerpc
@@ -998,16 +998,16 @@ class Builder:
             return
         args = [self.ColourNum(x) for x in args]
         indent = ' ' * 15
-        Tprint('%s%s: add: %s/%s, grow: %s/%s bytes: %s/%s (%s)' %
+        tprint('%s%s: add: %s/%s, grow: %s/%s bytes: %s/%s (%s)' %
               tuple([indent, self.col.build(self.col.YELLOW, fname)] + args))
-        Tprint('%s  %-38s %7s %7s %+7s' % (indent, 'function', 'old', 'new',
+        tprint('%s  %-38s %7s %7s %+7s' % (indent, 'function', 'old', 'new',
                                          'delta'))
         for diff, name in delta:
             if diff:
                 color = self.col.RED if diff > 0 else self.col.GREEN
                 msg = '%s  %-38s %7s %7s %+7d' % (indent, name,
                         old.get(name, '-'), new.get(name,'-'), diff)
-                Tprint(msg, colour=color)
+                tprint(msg, colour=color)
 
 
     def PrintSizeDetail(self, target_list, show_bloat):
@@ -1032,12 +1032,12 @@ class Builder:
                     color = self.col.RED if diff > 0 else self.col.GREEN
                 msg = ' %s %+d' % (name, diff)
                 if not printed_target:
-                    Tprint('%10s  %-15s:' % ('', result['_target']),
+                    tprint('%10s  %-15s:' % ('', result['_target']),
                           newline=False)
                     printed_target = True
-                Tprint(msg, colour=color, newline=False)
+                tprint(msg, colour=color, newline=False)
             if printed_target:
-                Tprint()
+                tprint()
                 if show_bloat:
                     target = result['_target']
                     outcome = result['_outcome']
@@ -1142,13 +1142,13 @@ class Builder:
                     color = self.col.RED if avg_diff > 0 else self.col.GREEN
                     msg = ' %s %+1.1f' % (name, avg_diff)
                     if not printed_arch:
-                        Tprint('%10s: (for %d/%d boards)' % (arch, count,
+                        tprint('%10s: (for %d/%d boards)' % (arch, count,
                               arch_count[arch]), newline=False)
                         printed_arch = True
-                    Tprint(msg, colour=color, newline=False)
+                    tprint(msg, colour=color, newline=False)
 
             if printed_arch:
-                Tprint()
+                tprint()
                 if show_detail:
                     self.PrintSizeDetail(target_list, show_bloat)
 
@@ -1293,7 +1293,7 @@ class Builder:
                     col = self.col.RED
                 elif line[0] == 'c':
                     col = self.col.YELLOW
-                Tprint('   ' + line, newline=True, colour=col)
+                tprint('   ' + line, newline=True, colour=col)
 
         def _OutputErrLines(err_lines, colour):
             """Output the line of error/warning lines, if not empty
@@ -1320,7 +1320,7 @@ class Builder:
                     else:
                         out = self.col.build(colour, line.char + line.errline)
                     out_list.append(out)
-                Tprint('\n'.join(out_list))
+                tprint('\n'.join(out_list))
                 self._error_lines += 1
 
 
@@ -1374,7 +1374,7 @@ class Builder:
                 self.AddOutcome(board_selected, arch_list, unknown_boards, '?',
                         self.col.MAGENTA)
             for arch, target_list in arch_list.items():
-                Tprint('%10s: %s' % (arch, target_list))
+                tprint('%10s: %s' % (arch, target_list))
                 self._error_lines += 1
             _OutputErrLines(better_err, colour=self.col.GREEN)
             _OutputErrLines(worse_err, colour=self.col.RED)
@@ -1504,13 +1504,13 @@ class Builder:
                 _AddConfig(lines, 'all', all_plus, all_minus, all_change)
                 #arch_summary[target] = '\n'.join(lines)
                 if lines:
-                    Tprint('%s:' % arch)
+                    tprint('%s:' % arch)
                     _OutputConfigInfo(lines)
 
             for lines, targets in lines_by_target.items():
                 if not lines:
                     continue
-                Tprint('%s :' % ' '.join(sorted(targets)))
+                tprint('%s :' % ' '.join(sorted(targets)))
                 _OutputConfigInfo(lines.split('\n'))
 
 
@@ -1529,7 +1529,7 @@ class Builder:
             if not board in board_dict:
                 not_built.append(board)
         if not_built:
-            Tprint("Boards not built (%d): %s" % (len(not_built),
+            tprint("Boards not built (%d): %s" % (len(not_built),
                   ', '.join(not_built)))
 
     def ProduceResultSummary(self, commit_upto, commits, board_selected):
@@ -1542,7 +1542,7 @@ class Builder:
             if commits:
                 msg = '%02d: %s' % (commit_upto + 1,
                         commits[commit_upto].subject)
-                Tprint(msg, colour=self.col.BLUE)
+                tprint(msg, colour=self.col.BLUE)
             self.PrintResultSummary(board_selected, board_dict,
                     err_lines if self._show_errors else [], err_line_boards,
                     warn_lines if self._show_errors else [], warn_line_boards,
@@ -1567,7 +1567,7 @@ class Builder:
         for commit_upto in range(0, self.commit_count, self._step):
             self.ProduceResultSummary(commit_upto, commits, board_selected)
         if not self._error_lines:
-            Tprint('(no errors to report)', colour=self.col.GREEN)
+            tprint('(no errors to report)', colour=self.col.GREEN)
 
 
     def SetupBuild(self, board_selected, commits):
@@ -1618,10 +1618,10 @@ class Builder:
             if os.path.isdir(git_dir):
                 # This is a clone of the src_dir repo, we can keep using
                 # it but need to fetch from src_dir.
-                Tprint('\rFetching repo for thread %d' % thread_num,
+                tprint('\rFetching repo for thread %d' % thread_num,
                       newline=False)
                 gitutil.fetch(git_dir, thread_dir)
-                terminal.PrintClear()
+                terminal.print_clear()
             elif os.path.isfile(git_dir):
                 # This is a worktree of the src_dir repo, we don't need to
                 # create it again or update it in any way.
@@ -1632,15 +1632,15 @@ class Builder:
                 raise ValueError('Git dir %s exists, but is not a file '
                                  'or a directory.' % git_dir)
             elif setup_git == 'worktree':
-                Tprint('\rChecking out worktree for thread %d' % thread_num,
+                tprint('\rChecking out worktree for thread %d' % thread_num,
                       newline=False)
                 gitutil.add_worktree(src_dir, thread_dir)
-                terminal.PrintClear()
+                terminal.print_clear()
             elif setup_git == 'clone' or setup_git == True:
-                Tprint('\rCloning repo for thread %d' % thread_num,
+                tprint('\rCloning repo for thread %d' % thread_num,
                       newline=False)
                 gitutil.clone(src_dir, thread_dir)
-                terminal.PrintClear()
+                terminal.print_clear()
             else:
                 raise ValueError("Can't setup git repo with %s." % setup_git)
 
@@ -1706,11 +1706,11 @@ class Builder:
         """
         to_remove = self._GetOutputSpaceRemovals()
         if to_remove:
-            Tprint('Removing %d old build directories...' % len(to_remove),
+            tprint('Removing %d old build directories...' % len(to_remove),
                   newline=False)
             for dirname in to_remove:
                 shutil.rmtree(dirname)
-            terminal.PrintClear()
+            terminal.print_clear()
 
     def BuildBoards(self, commits, board_selected, keep_outputs, verbose):
         """Build all commits for a list of boards
@@ -1736,7 +1736,7 @@ class Builder:
         self._PrepareWorkingSpace(min(self.num_threads, len(board_selected)),
                 commits is not None)
         self._PrepareOutputSpace()
-        Tprint('\rStarting build...', newline=False)
+        tprint('\rStarting build...', newline=False)
         self.SetupBuild(board_selected, commits)
         self.ProcessResult(None)
         self.thread_exceptions = []
@@ -1762,7 +1762,7 @@ class Builder:
 
             # Wait until we have processed all output
             self.out_queue.join()
-        Tprint()
+        tprint()
 
         msg = 'Completed: %d total built' % self.count
         if self.already_done:
@@ -1777,9 +1777,9 @@ class Builder:
             duration = duration - timedelta(microseconds=duration.microseconds)
             rate = float(self.count) / duration.total_seconds()
             msg += ', duration %s, rate %1.2f' % (duration, rate)
-        Tprint(msg)
+        tprint(msg)
         if self.thread_exceptions:
-            Tprint('Failed: %d thread exceptions' % len(self.thread_exceptions),
+            tprint('Failed: %d thread exceptions' % len(self.thread_exceptions),
                   colour=self.col.RED)
 
         return (self.fail, self.warned, self.thread_exceptions)
