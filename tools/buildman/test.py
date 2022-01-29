@@ -606,7 +606,7 @@ class TestBuild(unittest.TestCase):
 
     def testPrepareOutputSpace(self):
         def _Touch(fname):
-            tools.WriteFile(os.path.join(base_dir, fname), b'')
+            tools.write_file(os.path.join(base_dir, fname), b'')
 
         base_dir = tempfile.mkdtemp()
 
