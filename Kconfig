@@ -516,6 +516,46 @@ config BOARD_SIZE_LIMIT
 	  include SPL nor TPL, on platforms that use that functionality, they
 	  have a separate option to restict size.
 
+config HAS_DEPTHCHARGE
+	bool
+	help
+	  Enables visibility of options related to chainloading U-Boot from
+	  the Chrome OS bootloader ("Depthcharge").
+
+if HAS_DEPTHCHARGE
+
+config DEPTHCHARGE_PARTITION_IMAGE
+	bool "Build a kernel partition image for Depthcharge"
+	select BINMAN
+	select POSITION_INDEPENDENT if (ARM && CPU_V7A) || ARM64
+	select LINUX_KERNEL_IMAGE_HEADER if ARM64
+	help
+	  Enable this option to build a Chromium OS kernel partition
+	  image (u-boot-depthcharge.kpart) intended to make the
+	  Chromium OS bootloader ("Depthcharge") chainload into U-Boot.
+
+config DEPTHCHARGE_RW_LEGACY_IMAGE
+	bool "Build a Legacy Boot image for Depthcharge"
+	depends on BROKEN
+	select BINMAN
+	select REMAKE_ELF
+	help
+	  Enable this option to build a CBFS partition containing an ELF
+	  payload (u-boot-depthcharge.rwlegacy.cbfs) intended to make the
+	  Chromium OS bootloader ("Depthcharge") chainload into U-Boot.
+
+config DEPTHCHARGE_ALTFW_IMAGE
+	bool "Build an Alternative Firmware image for Depthcharge"
+	depends on BROKEN
+	select BINMAN
+	select REMAKE_ELF
+	help
+	  Enable this option to build a CBFS partition containing an ELF
+	  payload (u-boot-depthcharge.altfw.cbfs) intended to make the
+	  Chromium OS bootloader ("Depthcharge") chainload into U-Boot.
+
+endif # HAS_DEPTHCHARGE
+
 config SYS_CUSTOM_LDSCRIPT
 	bool "Use a custom location for the U-Boot linker script"
 	help
