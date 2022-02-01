@@ -1,0 +1,40 @@
+// SPDX-License-Identifier: GPL-2.0+
+// Copyright (c) Alper Nebi Yasak <alpernebiyasak@gmail.com>
+
+#include <config.h>
+
+#if IS_ENABLED(CONFIG_DEPTHCHARGE_PARTITION_IMAGE)
+
+#define _QUOTE(x) #x
+#define QUOTE(x) _QUOTE(x)
+
+#define MKIMAGE_ARGS QUOTE( \
+	-A arm -T kernel -C none -O linux -n U-Boot \
+	-a CONFIG_SYS_TEXT_BASE -e CONFIG_SYS_TEXT_BASE \
+)
+
+&binman {
+	depthcharge-kpart {
+		filename = "u-boot-depthcharge.kpart";
+
+		depthcharge-kernel {
+			keydir = "doc/chromium/files/devkeys";
+			keyblock = "kernel.keyblock";
+			signprivate = "kernel_data_key.vbprivk";
+			version = <1>;
+			preamble-flags = <0>;
+			arch = "arm";
+
+			vmlinuz {
+				mkimage {
+					args = MKIMAGE_ARGS;
+
+					u-boot {
+					};
+				};
+			};
+		};
+	};
+};
+
+#endif /* CONFIG_DEPTHCHARGE_PARTITION_IMAGE */
