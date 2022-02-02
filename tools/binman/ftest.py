@@ -5296,5 +5296,13 @@ fdt         fdtmap                Extract the devicetree blob from the fdtmap
         fnode = mkimage_dtb.GetNode('/images/fdt-1/hash')
         self.assertIn('value', fnode.props)
 
+    def testFitFdtBadOper(self):
+        """Check handling of an FDT map when the section cannot be found"""
+        with self.assertRaises(ValueError) as exc:
+            self._DoReadFileDtb('222_fit_bad_oper.dts')
+        self.assertIn("Node '/binman/fit': Unknown operation 'unknown'",
+                      str(exc.exception))
+
+
 if __name__ == "__main__":
     unittest.main()
