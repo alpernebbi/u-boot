@@ -3850,6 +3850,7 @@ class TestFunctional(unittest.TestCase):
 
     def testFitImageSubentryAlignment(self):
         """Test relative alignability of FIT image subentries"""
+        self._SetupSplElf()
         entry_args = {
             'test-id': TEXT_DATA,
         }
