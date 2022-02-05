@@ -61,6 +61,9 @@ PPC_MPC85XX_BR_DATA   = b'ppcmpc85xxbr'
 U_BOOT_NODTB_DATA     = b'nodtb with microcode pointer somewhere in here'
 U_BOOT_SPL_NODTB_DATA = b'splnodtb with microcode pointer somewhere in here'
 U_BOOT_TPL_NODTB_DATA = b'tplnodtb with microcode pointer somewhere in here'
+U_BOOT_EXP_DATA       = U_BOOT_NODTB_DATA + U_BOOT_DTB_DATA
+U_BOOT_SPL_EXP_DATA   = U_BOOT_SPL_NODTB_DATA + U_BOOT_SPL_DTB_DATA
+U_BOOT_TPL_EXP_DATA   = U_BOOT_TPL_NODTB_DATA + U_BOOT_TPL_DTB_DATA
 FSP_DATA              = b'fsp'
 CMC_DATA              = b'cmc'
 VBT_DATA              = b'vbt'
@@ -3753,6 +3756,48 @@ class TestFunctional(unittest.TestCase):
         self.assertEqual(2, len(data_sizes))
         # Format is "4 Bytes = 0.00 KiB = 0.00 MiB" so take the first word
         self.assertEqual(len(U_BOOT_DATA), int(data_sizes[0].split()[0]))
+        self.assertEqual(len(U_BOOT_SPL_DTB_DATA), int(data_sizes[1].split()[0]))
+
+    def testSimpleFitExpandsSubentries(self):
+        """Test that FIT images expand their subentries"""
+        data = self._DoReadFileDtb('161_fit.dts', use_expanded=True)[0]
+        self.assertEqual(U_BOOT_EXP_DATA, data[:len(U_BOOT_EXP_DATA)])
+        self.assertEqual(U_BOOT_NODTB_DATA, data[-len(U_BOOT_NODTB_DATA):])
+        fit_data = data[len(U_BOOT_EXP_DATA):-len(U_BOOT_NODTB_DATA)]
+
+        # The data should be inside the FIT
+        dtb = fdt.Fdt.FromData(fit_data)
+        dtb.Scan()
+        fnode = dtb.GetNode('/images/kernel')
+        self.assertIn('data', fnode.props)
+
+        fname = os.path.join(self._indir, 'fit_data.fit')
+        tools.WriteFile(fname, fit_data)
+        out = tools.Run('dumpimage', '-l', fname)
+
+        # Check a few features to make sure the plumbing works. We don't need
+        # to test the operation of mkimage or dumpimage here. First convert the
+        # output into a dict where the keys are the fields printed by dumpimage
+        # and the values are a list of values for each field
+        lines = out.splitlines()
+
+        # Converts "Compression:  gzip compressed" into two groups:
+        # 'Compression' and 'gzip compressed'
+        re_line = re.compile(r'^ *([^:]*)(?:: *(.*))?$')
+        vals = collections.defaultdict(list)
+        for line in lines:
+            mat = re_line.match(line)
+            vals[mat.group(1)].append(mat.group(2))
+
+        self.assertEquals('FIT description: test-desc', lines[0])
+        self.assertIn('Created:', lines[1])
+        self.assertIn('Image 0 (kernel)', vals)
+        self.assertIn('Hash value', vals)
+        data_sizes = vals.get('Data Size')
+        self.assertIsNotNone(data_sizes)
+        self.assertEqual(2, len(data_sizes))
+        # Format is "50 Bytes = 0.00 KiB = 0.00 MiB" so take the first word
+        self.assertEqual(len(U_BOOT_EXP_DATA), int(data_sizes[0].split()[0]))
         self.assertEqual(len(U_BOOT_SPL_DTB_DATA), int(data_sizes[1].split()[0]))
 
     def testFitExternal(self):
