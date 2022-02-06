@@ -60,8 +60,9 @@
 
 };
 
-#ifdef CONFIG_ROCKCHIP_SPI_IMAGE
 &binman {
+	multiple-images;
+#ifdef CONFIG_ROCKCHIP_SPI_IMAGE
 	rom {
 		filename = "u-boot.rom";
 		size = <0x400000>;
@@ -81,8 +82,8 @@
 		fdtmap {
 		};
 	};
-};
 #endif
+};
 
 &cru {
 	u-boot,dm-pre-reloc;

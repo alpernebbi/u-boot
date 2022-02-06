@@ -15,6 +15,7 @@ config ROCKCHIP_PX30
 	select DEBUG_UART_BOARD_INIT
 	imply ROCKCHIP_COMMON_BOARD
 	imply SPL_ROCKCHIP_COMMON_BOARD
+	imply BINMAN
 	help
 	  The Rockchip PX30 is a ARM-based SoC with a quad-core Cortex-A35
 	  including NEON and GPU, Mali-400 graphics, several DDR3 options
@@ -146,6 +147,7 @@ config ROCKCHIP_RK3308
 	imply SPL_SERIAL
 	imply TPL_SERIAL
 	imply SPL_SEPARATE_BSS
+	imply BINMAN
 	help
 	  The Rockchip RK3308 is a ARM-based Soc which embedded with quad
 	  Cortex-A35 and highly integrated audio interfaces.
@@ -167,6 +169,7 @@ config ROCKCHIP_RK3328
 	select ENABLE_ARM_SOC_BOOT0_HOOK
 	select DEBUG_UART_BOARD_INIT
 	select SYS_NS16550
+	imply BINMAN
 	help
 	  The Rockchip RK3328 is a ARM-based SoC with a quad-core Cortex-A53.
 	  including NEON and GPU, 1MB L2 cache, Mali-T7 graphics, two
@@ -186,6 +189,7 @@ config ROCKCHIP_RK3368
 	imply SPL_SERIAL
 	imply TPL_SERIAL
 	imply TPL_ROCKCHIP_COMMON_BOARD
+	imply BINMAN
 	help
 	  The Rockchip RK3368 is a ARM-based SoC with a octa-core (organised
 	  into a big and little cluster with 4 cores each) Cortex-A53 including
@@ -244,6 +248,7 @@ config ROCKCHIP_RK3399
 	imply TPL_ROCKCHIP_COMMON_BOARD
 	imply SYS_BOOTCOUNT_SINGLEWORD if BOOTCOUNT_LIMIT
 	imply CMD_BOOTCOUNT if BOOTCOUNT_LIMIT
+	imply BINMAN
 	help
 	  The Rockchip RK3399 is a ARM-based SoC with a dual-core Cortex-A72
 	  and quad-core Cortex-A53.
@@ -264,6 +269,7 @@ config ROCKCHIP_RK3568
 	select SYSCON
 	select BOARD_LATE_INIT
 	imply ROCKCHIP_COMMON_BOARD
+	imply BINMAN
 	help
 	  The Rockchip RK3568 is a ARM-based SoC with quad-core Cortex-A55,
 	  including NEON and GPU, 512K L3 cache, Mali-G52 based graphics,
