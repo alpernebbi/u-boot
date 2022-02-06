@@ -933,6 +933,19 @@ binman.
 
 
 
+Entry: op-tee: Open Portable Trusted Execution Environment (OP-TEE) blob
+------------------------------------------------------------------------
+
+Properties / Entry arguments:
+    - op-tee-path: Filename of file to read into entry. This is typically
+        called tee.elf
+
+This entry holds the OP-TEE Elf file, typically started by U-Boot SPL.
+See the U-Boot README for your architecture or board for how to use it. See
+https://https://www.op-tee.org/ for more information about OP-TEE.
+
+
+
 Entry: opensbi: RISC-V OpenSBI fw_dynamic blob
 ----------------------------------------------
 
