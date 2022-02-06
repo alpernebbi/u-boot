@@ -17,13 +17,93 @@
 		filename = "u-boot-rockchip.bin";
 		pad-byte = <0xff>;
 
-		blob {
-			filename = "idbloader.img";
+#ifdef CONFIG_TPL
+		mkimage {
+			args = "-n", CONFIG_SYS_SOC, "-T rksd";
+
+			u-boot-tpl {
+			};
 		};
 
+		u-boot-spl {
+		};
+#elif defined(CONFIG_SPL) /* SPL only */
+		mkimage {
+			args = "-n", CONFIG_SYS_SOC, "-T rksd";
+
+			u-boot-spl {
+			};
+		};
+#endif
+#if defined(CONFIG_SPL_FIT) && defined(CONFIG_ARM64)
+		fit: fit {
+			description = "FIT image for U-Boot with bl31 (TF-A)";
+			#address-cells = <1>;
+			fit,fdt-list = "of-list";
+			fit,external-offset = <CONFIG_FIT_EXTERNAL_OFFSET>;
+			images {
+				u-boot {
+					description = "U-Boot (64-bit)";
+					type = "standalone";
+					os = "U-Boot";
+					arch = "arm64";
+					compression = "none";
+					load = <CONFIG_SYS_TEXT_BASE>;
+					u-boot-nodtb {
+					};
+				};
+
+				@atf-SEQ {
+					fit,operation = "split-elf";
+					description = "ARM Trusted Firmware";
+					type = "firmware";
+					arch = "arm64";
+					os = "arm-trusted-firmware";
+					compression = "none";
+					fit,load;
+					fit,entry;
+					fit,data;
+
+					atf-bl31 {
+					};
+				};
+				@tee-SEQ {
+					fit,operation = "split-elf";
+					description = "TEE";
+					type = "tee";
+					arch = "arm64";
+					os = "tee";
+					compression = "none";
+					fit,load;
+					fit,entry;
+					fit,data;
+
+					op-tee {
+					};
+				};
+
+				@fdt-SEQ {
+					description = "fdt-NAME";
+					compression = "none";
+					type = "flat_dt";
+				};
+			};
+
+			configurations {
+				default = "@config-DEFAULT-SEQ";
+				@config-SEQ {
+					description = "NAME.dtb";
+					fdt = "fdt-SEQ";
+					firmware = "u-boot";
+					fit,loadables;
+				};
+			};
+		};
+#else
 		u-boot-img {
 			offset = <CONFIG_SPL_PAD_TO>;
 		};
+#endif /* CONFIG_ARM64 */
 	};
 };
 #endif
