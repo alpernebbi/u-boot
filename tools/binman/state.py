@@ -10,6 +10,7 @@ import hashlib
 import re
 import time
 import threading
+import zlib
 
 from dtoc import fdt
 import os
@@ -396,6 +397,8 @@ def CheckAddHashProp(node):
             return "Missing 'algo' property for hash node"
         if algo.value == 'sha256':
             size = 32
+        elif algo.value == 'crc32':
+            size = 8
         else:
             return "Unknown hash algorithm '%s'" % algo
         for n in GetUpdateNodes(hash_node):
@@ -409,6 +412,8 @@ def CheckSetHashValue(node, get_data_func):
             m = hashlib.sha256()
             m.update(get_data_func())
             data = m.digest()
+        if algo == 'crc32':
+            data = zlib.crc32(get_data_func()).to_bytes(8, 'little')
         for n in GetUpdateNodes(hash_node):
             n.SetData('value', data)
 
