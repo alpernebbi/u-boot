@@ -331,7 +331,8 @@ class CbfsFile(object):
         if self.ftype == TYPE_STAGE:
             pass
         elif self.ftype == TYPE_RAW:
-            hdr_len += ATTR_COMPRESSION_LEN
+            if self.compress != COMPRESS_NONE:
+                hdr_len += ATTR_COMPRESSION_LEN
         elif self.ftype == TYPE_EMPTY:
             pass
         else:
@@ -369,9 +370,10 @@ class CbfsFile(object):
                 data = comp_util.compress(orig_data, 'lzma', with_header=False)
             self.memlen = len(orig_data)
             self.data_len = len(data)
-            attr = struct.pack(ATTR_COMPRESSION_FORMAT,
-                               FILE_ATTR_TAG_COMPRESSION, ATTR_COMPRESSION_LEN,
-                               self.compress, self.memlen)
+            if self.compress != COMPRESS_NONE:
+                attr = struct.pack(ATTR_COMPRESSION_FORMAT,
+                                   FILE_ATTR_TAG_COMPRESSION, ATTR_COMPRESSION_LEN,
+                                   self.compress, self.memlen)
         elif self.ftype == TYPE_EMPTY:
             data = tools.get_bytes(self.erase_byte, self.size)
         else:
