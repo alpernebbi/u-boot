@@ -2554,9 +2554,9 @@ class TestFunctional(unittest.TestCase):
             'cbfs/u-boot:offset': 0x30,
             'cbfs/u-boot:uncomp-size': len(U_BOOT_DATA),
             'cbfs/u-boot:image-pos': 0x30,
-            'cbfs/u-boot-dtb:offset': 0xb4,
+            'cbfs/u-boot-dtb:offset': 0xa4,
             'cbfs/u-boot-dtb:size': len(U_BOOT_DATA),
-            'cbfs/u-boot-dtb:image-pos': 0xb4,
+            'cbfs/u-boot-dtb:image-pos': 0xa4,
             }, props)
 
     def testCbfsBadType(self):
@@ -2738,7 +2738,7 @@ class TestFunctional(unittest.TestCase):
 '  u-boot                  0     4  u-boot             0',
 '  section               100   %x  section          100' % section_size,
 '    cbfs                100   400  cbfs               0',
-'      u-boot            130     4  u-boot            30',
+'      u-boot            120     4  u-boot            20',
 '      u-boot-dtb        180   105  u-boot-dtb        80          3c9',
 '    u-boot-dtb          500   %x  u-boot-dtb       400          3c9' % fdt_size,
 '  fdtmap                %x   3bd  fdtmap           %x' %
