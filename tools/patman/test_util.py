@@ -123,20 +123,42 @@ def report_result(toolname:str, test_name: str, result: unittest.TestResult):
             result.testsRun -= 1
         result.errors = errors
 
-    print(result)
+    def print_test_result(status, test, err):
+        testmod, testcase = test.id().rsplit(".", 1)
+        print("=" * 70)
+        print(f"{status.upper()}: {testcase} ({testmod})")
+        print(f"{test.shortDescription()}")
+        print("-" * 70)
+        print(err.rstrip("\n"))
+        print()
+
     for test, err in result.errors:
-        print(test.id(), err)
+        print_test_result("ERROR", test, err)
     for test, err in result.failures:
-        print(err, result.failures)
+        print_test_result("FAIL", test, err)
+    for test, err in result.skipped:
+        print_test_result("SKIP", test, err)
+    if result.errors or result.failures or result.skipped:
+        print("-" * 70)
+
+    extra_status = []
+    if result.failures:
+        extra_status.append(f"failures={len(result.failures)}")
+    if result.errors:
+        extra_status.append(f"errors={len(result.errors)}")
     if result.skipped:
-        print('%d %s test%s SKIPPED:' % (len(result.skipped), toolname,
-            's' if len(result.skipped) > 1 else ''))
-        for skip_info in result.skipped:
-            print('%s: %s' % (skip_info[0], skip_info[1]))
-    if result.errors or result.failures:
-        print('%s tests FAILED' % toolname)
-        return 1
-    return 0
+        extra_status.append(f"skipped={len(result.skipped)}")
+
+    status = "OK" if result.wasSuccessful() else "FAILED"
+    if extra_status:
+        extra_str = ', '.join(extra_status)
+        status = f"{status} ({extra_str})"
+
+    print(f"Ran {result.testsRun} tests.")
+    print()
+    print(f"{toolname} tests {status}")
+
+    return 0 if result.wasSuccessful() else 1
 
 
 def run_test_suites(result, debug, verbosity, test_preserve_dirs, processes,
