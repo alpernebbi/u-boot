@@ -42,7 +42,6 @@ HEADER_VERSION2    = 0x31313132
 FILE_HEADER_FORMAT = b'>8sIIII'
 FILE_HEADER_LEN    = 0x18
 FILE_MAGIC         = b'LARCHIVE'
-FILENAME_ALIGN     = 16  # Filename lengths are aligned to this
 
 # A stage header containing information about 'stage' files
 # Yes this is correct: this header is in litte-endian format
@@ -75,6 +74,9 @@ MIN_BOOTBLOCK_SIZE     = 4
 
 # Files start aligned to this boundary in the CBFS
 ENTRY_ALIGN    = 0x40
+
+# Attributes are aligned to this boundary in entries
+ATTRIBUTE_ALIGN = 4
 
 # CBFSs must declare an architecture since much of the logic is designed with
 # x86 in mind. The effect of setting this value is not well documented, but in
@@ -190,7 +192,7 @@ def _pack_string(instr):
         String with required padding (at least one 0x00 byte) at the end
     """
     val = tools.to_bytes(instr)
-    pad_len = align_int(len(val) + 1, FILENAME_ALIGN)
+    pad_len = align_int(len(val) + 1, ATTRIBUTE_ALIGN)
     return val + tools.get_bytes(0, pad_len - len(val))
 
 
@@ -300,7 +302,7 @@ class CbfsFile(object):
             CbfsFile object containing the file information
         """
         cfile = CbfsFile('', TYPE_EMPTY, b'', None)
-        cfile.size = space_to_use - FILE_HEADER_LEN - FILENAME_ALIGN
+        cfile.size = space_to_use - FILE_HEADER_LEN - ATTRIBUTE_ALIGN
         cfile.erase_byte = erase_byte
         return cfile
 
@@ -852,8 +854,8 @@ class CbfsReader(object):
         """
         val = b''
         while True:
-            data = fd.read(FILENAME_ALIGN)
-            if len(data) < FILENAME_ALIGN:
+            data = fd.read(ATTRIBUTE_ALIGN)
+            if len(data) < ATTRIBUTE_ALIGN:
                 return None
             pos = data.find(b'\0')
             if pos == -1:
