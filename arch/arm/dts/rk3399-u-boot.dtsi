@@ -42,7 +42,9 @@
 			u-boot-spl {
 			};
 		};
-		u-boot-img {
+		u-boot-itb {
+			type = "blob";
+			filename = "u-boot.itb";
 			offset = <0x40000>;
 		};
 		u-boot {
