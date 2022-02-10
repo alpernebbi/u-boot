@@ -575,6 +575,9 @@ class Entry_fit(Entry_section):
         """
         # If any pieces are missing, skip this. The missing entries will show
         # an error
+        if node is None:
+            return
+
         if not missing:
             try:
                 segments, entry = elf.read_segments(data)
@@ -601,6 +604,9 @@ class Entry_fit(Entry_section):
 
         # Delete the template node as it has served its purpose
         node.Delete()
+
+    def CheckEntries(self):
+        pass
 
     def _BuildInput(self, fdt):
         """Finish the FIT by adding the 'data' properties to it
@@ -664,6 +670,8 @@ class Entry_fit(Entry_section):
 
         for path, section in self._entries.items():
             node = fdt.GetNode(path)
+            if node is None:
+                continue
 
             data_prop = node.props.get("data")
             data_pos = fdt_util.GetInt(node, "data-position")
