@@ -339,9 +339,6 @@ class Entry_fit(Entry_section):
 
         self._loadables = []
 
-    def ReadNode(self):
-        super().ReadNode()
-
     def _get_operation(self, base_node, node):
         """Get the operation referenced by a subnode
 
