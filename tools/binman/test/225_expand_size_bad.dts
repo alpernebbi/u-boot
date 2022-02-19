@@ -3,12 +3,8 @@
 
 / {
 	binman {
-		_testing {
-			extend-size;
-			return-contents-once;
-		};
 		u-boot {
-			offset = <8>;
+			expand-size;
 		};
 	};
 };

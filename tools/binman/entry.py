@@ -233,6 +233,8 @@ class Entry(object):
         """
         if 'pos' in self._node.props:
             self.Raise("Please use 'offset' instead of 'pos'")
+        if 'expand-size' in self._node.props:
+            self.Raise("Please use 'extend-size' instead of 'expand-size'")
         self.offset = fdt_util.GetInt(self._node, 'offset')
         self.size = fdt_util.GetInt(self._node, 'size')
         self.orig_offset = fdt_util.GetInt(self._node, 'orig-offset')
@@ -260,7 +262,7 @@ class Entry(object):
                        self.align_size)
         self.align_end = fdt_util.GetInt(self._node, 'align-end')
         self.offset_unset = fdt_util.GetBool(self._node, 'offset-unset')
-        self.expand_size = fdt_util.GetBool(self._node, 'expand-size')
+        self.expand_size = fdt_util.GetBool(self._node, 'extend-size')
         self.missing_msg = fdt_util.GetString(self._node, 'missing-msg')
 
         # This is only supported by blobs and sections at present
@@ -772,8 +774,8 @@ features to produce new behaviours.
             name = '%s.%s' % (node.name, name)
         return name
 
-    def ExpandToLimit(self, limit):
-        """Expand an entry so that it ends at the given offset limit"""
+    def extend_to_limit(self, limit):
+        """Extent an entry so that it ends at the given offset limit"""
         if self.offset + self.size < limit:
             self.size = limit - self.offset
             # Request the contents again, since changing the size requires that

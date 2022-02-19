@@ -480,7 +480,7 @@ image-pos:
     for each entry. This makes it easy to find out exactly where the entry
     ended up in the image, regardless of parent sections, etc.
 
-expand-size:
+extend-size:
     Expand the size of this entry to fit available space. This space is only
     limited by the size of the image/section and the position of the next
     entry.
