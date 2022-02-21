@@ -730,6 +730,7 @@ class Entry_section(Entry):
             entry.ListEntries(entries, indent + 1)
 
     def LoadData(self, decomp=True):
+        super().LoadData(decomp)
         for entry in self._entries.values():
             entry.LoadData(decomp)
         self.Detail('Loaded data')
