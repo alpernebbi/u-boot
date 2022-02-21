@@ -470,6 +470,20 @@ class Entry_section(Entry):
                 sizes_ok = False
         return sizes_ok and sizes_ok_base
 
+    def ProcessContentsUpdate(self, data):
+        update_ok = True
+
+        if not super().ProcessContentsUpdate(data):
+            update_ok = False
+
+        for child in self._entries.values():
+            offset = child.offset - self._skip_at_start
+            child_data = data[offset:offset + child.size]
+            if not child.ProcessContentsUpdate(child_data):
+                update_ok = False
+
+        return update_ok
+
     def WriteMap(self, fd, indent):
         """Write a map of the section to a .map file
 
