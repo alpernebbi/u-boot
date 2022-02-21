@@ -7,6 +7,7 @@
 
 import libfdt
 
+from binman import comp_util
 from binman.entry import Entry, EntryArg
 from binman.etype.section import Entry_section
 from binman import elf
@@ -674,6 +675,45 @@ class Entry_fit(Entry_section):
         data = fdt.as_bytearray()
         return data
 
+    def _parse_fit_images(self, fit_data):
+        images = {}
+        fdt = Fdt.FromData(fit_data)
+        fdt.Scan()
+
+        for node in fdt.GetNode(f"/images").subnodes:
+            data_prop = node.props.get("data")
+            data_pos = fdt_util.GetInt(node, "data-position")
+            data_offset = fdt_util.GetInt(node, "data-offset")
+            data_size = fdt_util.GetInt(node, "data-size")
+
+            # Contents are inside the FIT
+            if data_prop is not None:
+                # GetOffset() returns offset of a fdt_property struct,
+                # which has 3 fdt32_t members before the actual data.
+                offset = data_prop.GetOffset() + 12
+                size = len(data_prop.bytes)
+                data = data_prop.bytes
+
+            # External offset from the base of the FIT
+            elif data_pos is not None:
+                offset = data_pos
+                size = data_size
+                data = fit_data[offset:offset+size]
+
+            # External offset from the end of the FIT, not used in binman
+            elif data_offset is not None: # pragma: no cover
+                offset = fdt.GetFdtObj().totalsize() + data_offset
+                size = data_size
+                data = fit_data[offset:offset+size]
+
+            # This should never happen
+            else: # pragma: no cover
+                self.Raise(f'{path}: missing data properties')
+
+            images[node.name] = (offset, size, data)
+
+        return images
+
     def SetImagePos(self, image_pos):
         """Set the position in the image
 
@@ -690,41 +730,49 @@ class Entry_fit(Entry_section):
         if self.mkimage in self.missing_bintools:
             return
 
-        fdt = Fdt.FromData(self.GetData())
-        fdt.Scan()
-
+        images = self._parse_fit_images(self.GetData())
         for image_name, section in self._entries.items():
-            path = f"/images/{image_name}"
-            node = fdt.GetNode(path)
-
-            data_prop = node.props.get("data")
-            data_pos = fdt_util.GetInt(node, "data-position")
-            data_offset = fdt_util.GetInt(node, "data-offset")
-            data_size = fdt_util.GetInt(node, "data-size")
-
-            # Contents are inside the FIT
-            if data_prop is not None:
-                # GetOffset() returns offset of a fdt_property struct,
-                # which has 3 fdt32_t members before the actual data.
-                offset = data_prop.GetOffset() + 12
-                size = len(data_prop.bytes)
-
-            # External offset from the base of the FIT
-            elif data_pos is not None:
-                offset = data_pos
-                size = data_size
-
-            # External offset from the end of the FIT, not used in binman
-            elif data_offset is not None: # pragma: no cover
-                offset = fdt.GetFdtObj().totalsize() + data_offset
-                size = data_size
-
-            # This should never happen
-            else: # pragma: no cover
-                self.Raise(f'{path}: missing data properties')
-
+            offset, size, _ = images[image_name]
             section.SetOffsetSize(offset, size)
             section.SetImagePos(self.image_pos)
+
+    def ReadChildData(self, child, decomp=True, alt_format=None):
+        parent_data = self.ReadData(True, alt_format)
+        images = self._parse_fit_images(parent_data)
+        _, _, data = images[child.name]
+
+        if decomp:
+            indata = data
+            data = comp_util.decompress(indata, child.compress)
+            if child.uncomp_size:
+                tout.info("%s: Decompressing data size %#x with algo '%s' to data size %#x" %
+                            (child.GetPath(), len(indata), child.compress,
+                            len(data)))
+
+        if alt_format:
+            new_data = child.GetAltFormat(data, alt_format)
+            if new_data is not None:
+                data = new_data
+
+        return data
+
+    def ProcessContentsUpdate(self, data):
+        update_ok = True
+
+        # Skip the Entry_section implementation
+        if not super(Entry_section, self).ProcessContentsUpdate(data):
+            update_ok = False
+
+        images = self._parse_fit_images(data)
+        for image_name, (_, _, child_data) in images.items():
+            if image_name not in self._entries:
+                raise NotImplementedError
+
+            entry = self._entries[image_name]
+            if not entry.ProcessContentsUpdate(child_data):
+                update_ok = False
+
+        return update_ok
 
     def AddBintools(self, btools):
         super().AddBintools(btools)
