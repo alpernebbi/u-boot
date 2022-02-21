@@ -757,17 +757,6 @@ class Entry_section(Entry):
         """
         return self._sort
 
-    def ReadData(self, decomp=True, alt_format=None):
-        tout.info("ReadData path='%s'" % self.GetPath())
-        parent_data = self.section.ReadData(True, alt_format)
-        offset = self.offset - self.section._skip_at_start
-        data = parent_data[offset:offset + self.size]
-        tout.info(
-            '%s: Reading data from offset %#x-%#x (real %#x), size %#x, got %#x' %
-                  (self.GetPath(), self.offset, self.offset + self.size, offset,
-                   self.size, len(data)))
-        return data
-
     def ReadChildData(self, child, decomp=True, alt_format=None):
         tout.debug(f"ReadChildData for child '{child.GetPath()}'")
         parent_data = self.ReadData(True, alt_format)
