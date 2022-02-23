@@ -105,7 +105,7 @@ def GetSymbolFileOffset(fname, patterns):
                     return addr - seg['p_vaddr'] + seg['p_offset']
 
     if not ELF_TOOLS:
-        raise ValueError('Python elftools package is not available')
+        raise ValueError("Python: No module named 'elftools'")
 
     syms = {}
     with open(fname, 'rb') as fd:
@@ -371,7 +371,7 @@ def UpdateFile(infile, outfile, start_sym, end_sym, insert):
     tools.write_file(outfile, newdata)
     tout.info('Written to offset %#x' % syms[start_sym].offset)
 
-def read_segments(data):
+def read_loadable_segments(data):
     """Read segments from an ELF file
 
     Args:
@@ -389,7 +389,7 @@ def read_segments(data):
         ValueError: elftools is not available
     """
     if not ELF_TOOLS:
-        raise ValueError('Python elftools package is not available')
+        raise ValueError("Python: No module named 'elftools'")
     with io.BytesIO(data) as inf:
         try:
             elf = ELFFile(inf)
