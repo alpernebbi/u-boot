@@ -87,5 +87,10 @@ config BOARD_SPECIFIC_OPTIONS # dummy
 	imply CMD_USB
 	imply UFS
 	imply UFS_PCI
+	imply BOARD_EARLY_INIT_F
+	imply BOARD_EARLY_INIT_R
+	imply VIDEO_RAMFB
+	imply CMD_QFW
+	imply QFW_MMIO
 
 endif
