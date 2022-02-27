@@ -82,5 +82,10 @@ config BOARD_SPECIFIC_OPTIONS # dummy
 	imply USB_XHCI_PCI
 	imply USB_KEYBOARD
 	imply CMD_USB
+	imply BOARD_EARLY_INIT_F
+	imply BOARD_EARLY_INIT_R
+	imply VIDEO_RAMFB
+	imply CMD_QFW
+	imply QFW_MMIO
 
 endif
