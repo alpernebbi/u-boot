@@ -70,6 +70,7 @@ enum {
 #define FW_CFG_DMA_READ	(1 << 1)
 #define FW_CFG_DMA_SKIP	(1 << 2)
 #define FW_CFG_DMA_SELECT	(1 << 3)
+#define FW_CFG_DMA_WRITE	(1 << 4)
 
 /* Bit set in FW_CFG_ID response to indicate DMA interface availability. */
 #define FW_CFG_DMA_ENABLED	(1 << 1)
