@@ -16,6 +16,7 @@
 #include <malloc.h>
 #include <qfw.h>
 #include <dm.h>
+#include <dm/lists.h>
 #include <misc.h>
 #include <tables_csum.h>
 #include <asm/acpi_table.h>
@@ -67,6 +68,27 @@ void qfw_read_entry(struct udevice *dev, u16 entry, u32 size, void *address)
 		qfw_read_entry_io(qdev, entry, size, address);
 }
 
+static void qfw_bind_ramfb(struct udevice *dev)
+{
+	struct fw_file *file;
+	int ret;
+
+	if (!IS_ENABLED(CONFIG_VIDEO_RAMFB))
+		return;
+
+	ret = qfw_read_firmware_list(dev);
+	if (ret)
+		return;
+
+	file = qfw_find_file(dev, "etc/ramfb");
+	if (!file) {
+		/* No ramfb available. */
+		return;
+	}
+
+	device_bind_driver(dev, "ramfb", "qfw-ramfb", NULL);
+}
+
 int qfw_register(struct udevice *dev)
 {
 	struct qfw_dev *qdev = dev_get_uclass_priv(dev);
@@ -82,6 +104,8 @@ int qfw_register(struct udevice *dev)
 	qfw_read_entry_io(qdev, FW_CFG_ID, 1, &dma_enabled);
 	if (dma_enabled & FW_CFG_DMA_ENABLED)
 		qdev->dma_present = true;
+
+	qfw_bind_ramfb(dev);
 
 	return 0;
 }
