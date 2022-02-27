@@ -142,6 +142,16 @@ struct bios_linker_entry {
 	};
 } __packed;
 
+/* ramfb configuration details to read into etc/ramfb fw_cfg file */
+struct ramfb_cfg {
+	__be64 addr;	/* Address of an allocated framebuffer */
+	__be32 fourcc;	/* Pixel format in Linux DRM fourcc code */
+	__be32 flags;	/* Unknown, appears unused */
+	__be32 width;	/* Width of the requested ramfb display */
+	__be32 height;	/* Height of the requested ramfb display */
+	__be32 stride;	/* Number of bytes per line? */
+} __packed;
+
 /* DMA transfer control data between UCLASS_QFW and QEMU. */
 struct qfw_dma {
 	__be32 control;

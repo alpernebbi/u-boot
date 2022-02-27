@@ -866,6 +866,36 @@ config VIDEO_MCDE_SIMPLE
 	  before u-boot starts, and u-boot will simply render to the pre-
 	  allocated frame buffer surface.
 
+config VIDEO_RAMFB
+	bool "QEMU ramfb display driver for in-RAM display"
+	depends on QFW
+	help
+	  Enables a RAM based simple frame buffer driver which uses qfw to
+	  notify the hypervisor about the location of a Frame Buffer allocated
+	  in guest RAM as well as its properties.
+
+if VIDEO_RAMFB
+
+config VIDEO_RAMFB_SIZE_X
+	int "Width of ramfb display (X resolution)"
+	default 1280
+	help
+	  Sets the width of the ramfb display.
+
+	  These two options control the size of the display set up by QEMU.
+	  Typical sizes are 1024 x 768 or 1280 x 1024.
+
+config VIDEO_RAMFB_SIZE_Y
+	int "Height of ramfb display (Y resolution)"
+	default 1024
+	help
+	  Sets the height of the ramfb display.
+
+	  These two options control the size of the display set up by QEMU.
+	  Typical sizes are 1024 x 768 or 1280 x 1024.
+
+endif
+
 config OSD
 	bool "Enable OSD support"
 	depends on DM
