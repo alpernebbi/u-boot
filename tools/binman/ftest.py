@@ -5703,5 +5703,17 @@ fdt         fdtmap                Extract the devicetree blob from the fdtmap
         self.assertEqual(new_data, data)
 
 
+    def testExtractCompressSection(self):
+        """Test extraction of a compressed section"""
+        self._CheckLz4()
+        self._DoReadFileDtb('234_extract_compress_section.dts',
+                use_real_dtb=True, update_dtb=True)
+        image_fname = tools.get_output_filename('image.bin')
+
+        data = control.ReadEntry(image_fname, 'section', decomp=False)
+        orig = control.ReadEntry(image_fname, 'section', decomp=True)
+        self.assertEquals(orig, self._decompress(data))
+        self.assertEquals(COMPRESS_DATA + U_BOOT_DATA, orig)
+
 if __name__ == "__main__":
     unittest.main()
