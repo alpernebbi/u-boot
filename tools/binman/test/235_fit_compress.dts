@@ -1,0 +1,56 @@
+// SPDX-License-Identifier: GPL-2.0+
+
+/dts-v1/;
+
+/ {
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	binman {
+		u-boot {
+		};
+
+		fit {
+			description = "test-desc";
+			#address-cells = <1>;
+
+			images {
+				uncomp {
+					description = "Uncompressed Test";
+					type = "kernel";
+					arch = "arm64";
+					os = "linux";
+					compression = "none";
+					compress = "none";
+					load = <00000000>;
+					entry = <00000000>;
+
+					blob {
+						filename = "compress";
+					};
+				};
+
+				lz4 {
+					description = "LZ4 Compress Test";
+					type = "script";
+					arch = "arm64";
+					compression = "lz4";
+					compress = "lz4";
+
+					blob {
+						filename = "compress";
+					};
+				};
+			};
+
+			configurations {
+				default = "conf-1";
+
+				conf-1 {
+					description = "Compressed blobs";
+					kernel = "uncomp";
+				};
+			};
+		};
+	};
+};

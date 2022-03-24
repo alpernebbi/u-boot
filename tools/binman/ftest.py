@@ -5715,5 +5715,88 @@ fdt         fdtmap                Extract the devicetree blob from the fdtmap
         self.assertEquals(orig, self._decompress(data))
         self.assertEquals(COMPRESS_DATA + U_BOOT_DATA, orig)
 
+    def testFitSubentriesCompress(self):
+        """Test compressing a FIT subentry"""
+        self._CheckLz4()
+        data, _, _, out_dtb_fname = self._DoReadFileDtb(
+            '235_fit_compress.dts', use_real_dtb=True, update_dtb=True)
+
+        dtb = fdt.Fdt(out_dtb_fname)
+        dtb.Scan()
+        props = self._GetPropTree(dtb, ['offset', 'image-pos', 'size',
+                                        'uncomp-size'])
+
+        image_pos = props["fit:image-pos"]
+        size = props["fit:size"]
+        fit_data = data[image_pos:image_pos+size]
+        fit = fdt.Fdt.FromData(fit_data)
+        fit.Scan()
+
+        uncomp_node = fit.GetNode('/images/uncomp')
+        uncomp_data = fit.GetProps(uncomp_node)["data"].bytes
+        self.assertEqual(COMPRESS_DATA, uncomp_data)
+
+        lz4_node = fit.GetNode('/images/lz4')
+        lz4_data = fit.GetProps(lz4_node)["data"].bytes
+        self.assertEqual(COMPRESS_DATA, self._decompress(lz4_data))
+
+        expected = {
+            'size': 1784,
+            'offset': 0,
+            'image-pos': 0,
+
+            'u-boot:size': 4,
+            'u-boot:offset': 0,
+            'u-boot:image-pos': 0,
+
+            'fit:size': 1780,
+            'fit:offset': 4,
+            'fit:image-pos': 4,
+
+            'fit/images/uncomp:size': 36,
+            'fit/images/uncomp:offset': 320,
+            'fit/images/uncomp:image-pos': 324,
+
+            'fit/images/uncomp/blob:size': 36,
+            'fit/images/uncomp/blob:offset': 0,
+            'fit/images/uncomp/blob:image-pos': 324,
+
+            'fit/images/lz4:uncomp-size': 36,
+            'fit/images/lz4:size': 39,
+            'fit/images/lz4:offset': 500,
+            'fit/images/lz4:image-pos': 504,
+
+            'fit/images/lz4/blob:size': 36,
+            'fit/images/lz4/blob:offset': 0,
+            # No image-pos since it's in a compressed section
+        }
+        self.assertEqual(expected, props)
+
+        # Check the data is where we think it is
+        for node, expected in [
+            ("u-boot", U_BOOT_DATA),
+            ("fit/images/uncomp", uncomp_data),
+            ("fit/images/lz4", lz4_data),
+        ]:
+            image_pos = props[f"{node}:image-pos"]
+            size = props[f"{node}:size"]
+            self.assertEqual(len(expected), size)
+            self.assertEqual(expected, data[image_pos:image_pos+size])
+
+    def testExtractFitSubentriesCompress(self):
+        """Test extracting compressed FIT subentries"""
+        self._CheckLz4()
+        self._DoReadFileRealDtb('236_extract_fit_compress.dts')
+        image_fname = tools.get_output_filename('image.bin')
+
+        uncomp_data = control.ReadEntry(image_fname, 'fit/uncomp')
+        self.assertEqual(COMPRESS_DATA, uncomp_data)
+
+        lz4_data = control.ReadEntry(image_fname, 'fit/lz4', decomp=False)
+        self.assertEqual(COMPRESS_DATA, self._decompress(lz4_data))
+
+        lz4_data = control.ReadEntry(image_fname, 'fit/lz4', decomp=True)
+        self.assertEqual(COMPRESS_DATA, lz4_data)
+
 if __name__ == "__main__":
     unittest.main()
