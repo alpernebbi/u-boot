@@ -388,6 +388,43 @@ def SetInt(node, prop, value, for_repack=False):
                     (n.GetFdt().name, n.path, prop, value))
         n.SetInt(prop, value)
 
+def ClearNode(node):
+    """Deletes a node in affected device trees
+
+    Args:
+        node: Node to delete
+
+    Returns:
+        New subnode that was created in main tree
+    """
+    for n in GetUpdateNodes(node):
+        n.Clear()
+
+def CopyNode(src, dest):
+    """Add a new subnode to a node in affected device trees
+
+    Args:
+        node: Node to add to
+        name: name of node to add
+
+    Returns:
+        New subnode that was created in main tree
+    """
+    tout.debug(f'Copying nodes: {src.name} to {dest.name}')
+    for n in GetUpdateNodes(dest):
+        tout.debug(f'- For dtb {n}')
+        for prop_name, prop in src.props.items():
+            tout.debug(f'  - Add prop {prop_name} = {prop.bytes}')
+            n.AddZeroProp(prop_name)
+            n.props[prop_name].SetData(prop.bytes)
+
+        for subnode in src.subnodes:
+            tout.debug(f'  - Add subnode {subnode.name}')
+            n.AddSubnode(subnode.name)
+
+    for subnode in src.subnodes:
+        CopyNode(src.FindNode(subnode.name), dest.FindNode(subnode.name))
+
 def CheckAddHashProp(node):
     hash_node = node.FindNode('hash')
     if hash_node:

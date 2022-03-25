@@ -565,6 +565,25 @@ class Node:
         self._fdt.Invalidate()
         parent.subnodes.remove(self)
 
+    def Clear(self):
+        """Delete all subnodes and properties of the node
+
+        All contents are deleted and the offset cache is invalidated.
+
+        Args:
+            node (Node): Node to clear
+
+        Raises:
+            ValueError if the any subnode or property does not exist
+        """
+        print(f"Clearing node: {self}")
+        for prop in list(self.props):
+            print(f"- Deleting prop: {prop}")
+            self.DeleteProp(prop)
+        for node in list(self.subnodes):
+            print(f"- Deleting subnode: {node.name}: {node}")
+            node.Delete()
+
     def Sync(self, auto_resize=False):
         """Sync node changes back to the device tree
 

@@ -12,6 +12,7 @@ import os
 import re
 import sys
 
+import libfdt
 from binman.entry import Entry
 from binman.etype import fdtmap
 from binman.etype import image_header
@@ -119,15 +120,40 @@ class Image(section.Entry_section):
         if pos is None:
             # Look for the FDT map
             pos = fdtmap.LocateFdtmap(data)
-        if pos is None:
-            raise ValueError('Cannot find FDT map in image')
 
-        # We don't know the FDT size, so check its header first
-        probe_dtb = fdt.Fdt.FromData(
-            data[pos + fdtmap.FDTMAP_HDR_LEN:pos + 256])
-        dtb_size = probe_dtb.GetFdtObj().totalsize()
-        fdtmap_data = data[pos:pos + dtb_size + fdtmap.FDTMAP_HDR_LEN]
-        fdt_data = fdtmap_data[fdtmap.FDTMAP_HDR_LEN:]
+        if pos is not None:
+            # We don't know the FDT size, so check its header first
+            probe_dtb = fdt.Fdt.FromData(
+                data[pos + fdtmap.FDTMAP_HDR_LEN:pos + 256])
+            dtb_size = probe_dtb.GetFdtObj().totalsize()
+            fdtmap_data = data[pos:pos + dtb_size + fdtmap.FDTMAP_HDR_LEN]
+            fdt_data = fdtmap_data[fdtmap.FDTMAP_HDR_LEN:]
+
+        else:
+            # Create a fake fdtmap with one blob-ext entry spanning
+            # entire image
+            fsw = libfdt.FdtSw()
+            fsw.finish_reservemap()
+            with fsw.add_node(''):
+                fsw.property_string('image-node', 'binman')
+                fsw.property_string('filename', fname)
+                fsw.property_u32('image-pos', 0)
+                fsw.property_u32('size', size)
+                fsw.property_u32('offset', 0)
+                with fsw.add_node(fname):
+                    fsw.property_string('type', 'blob-ext')
+                    fsw.property_string('filename', fname)
+                    fsw.property_u32('image-pos', 0)
+                    fsw.property_u32('offset', 0)
+                    fsw.property_u32('size', size)
+            fdt_obj = fsw.as_fdt()
+            fdt_obj.pack()
+            fdt_data = fdt_obj.as_bytearray()
+            fdtmap_data = (
+                fdtmap.FDTMAP_MAGIC.ljust(fdtmap.FDTMAP_HDR_LEN)
+                + fdt_data
+            )
+
         out_fname = tools.get_output_filename('fdtmap.in.dtb')
         tools.write_file(out_fname, fdt_data)
         dtb = fdt.Fdt(out_fname)

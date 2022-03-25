@@ -794,6 +794,27 @@ class Entry_section(Entry):
     def WriteChildData(self, child):
         return True
 
+    def replace_child_with(self, child, new_entry):
+        self.Detail(f"replace_child_with({child}, {new_entry}) called")
+
+        for child_name, entry in self._entries.items():
+            if entry == child:
+                break
+        else:
+            return False
+
+        state.ClearNode(child._node)
+        state.CopyNode(new_entry._node, child._node)
+        state.AddString(child._node, "type", "section")
+        new_child = Entry.Create(self, child._node, etype='section')
+        new_child.ReadNode()
+        new_child.ResetForPack()
+        new_child.ObtainContents()
+        self._entries[child_name] = new_child
+        self._SetEntryOffsetSize(child_name, child.offset, child.size)
+
+        return True
+
     def SetAllowMissing(self, allow_missing):
         """Set whether a section allows missing external blobs
 

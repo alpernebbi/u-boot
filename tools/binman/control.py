@@ -307,19 +307,19 @@ def BeforeReplace(image, allow_resize):
         image.ResetForPack()
 
 
-def ReplaceOneEntry(image, entry, data, do_compress, allow_resize):
+def ReplaceOneEntry(image, entry, new_entry, do_compress, allow_resize):
     """Handle replacing a single entry an an image
 
     Args:
         image: Image to update
         entry: Entry to write
-        data: Data to replace with
+        new_entry: Entry to replace with
         do_compress: True to compress the data if needed, False if data is
             already compressed so should be used as is
         allow_resize: True to allow entries to change size (this does a re-pack
             of the entries), False to raise an exception
     """
-    if not entry.WriteData(data, do_compress):
+    if not entry.section.replace_child_with(entry, new_entry):
         if not image.allow_repack:
             entry.Raise('Entry data size does not match, but allow-repack is not present for this image')
         if not allow_resize:
@@ -340,15 +340,15 @@ def AfterReplace(image, allow_resize, write_map):
                  get_contents=False, allow_resize=allow_resize)
 
 
-def WriteEntryToImage(image, entry, data, do_compress=True, allow_resize=True,
-                      write_map=False):
+def WriteEntryToImage(image, entry, new_entry, do_compress=True,
+                      allow_resize=True, write_map=False):
     BeforeReplace(image, allow_resize)
     tout.info('Writing data to %s' % entry.GetPath())
-    ReplaceOneEntry(image, entry, data, do_compress, allow_resize)
+    ReplaceOneEntry(image, entry, new_entry, do_compress, allow_resize)
     AfterReplace(image, allow_resize=allow_resize, write_map=write_map)
 
 
-def WriteEntry(image_fname, entry_path, data, do_compress=True,
+def WriteEntry(image_fname, entry_path, new_entry, do_compress=True,
                allow_resize=True, write_map=False):
     """Replace an entry in an image
 
@@ -358,7 +358,7 @@ def WriteEntry(image_fname, entry_path, data, do_compress=True,
     Args:
         image_fname: Image filename to process
         entry_path: Path to entry to extract
-        data: Data to replace with
+        new_entry: Entry to replace with
         do_compress: True to compress the data if needed, False if data is
             already compressed so should be used as is
         allow_resize: True to allow entries to change size (this does a re-pack
@@ -371,7 +371,7 @@ def WriteEntry(image_fname, entry_path, data, do_compress=True,
     tout.info("Write entry '%s', file '%s'" % (entry_path, image_fname))
     image = Image.FromFile(image_fname)
     entry = image.FindEntryPath(entry_path)
-    WriteEntryToImage(image, entry, data, do_compress=do_compress,
+    WriteEntryToImage(image, entry, new_entry, do_compress=do_compress,
                       allow_resize=allow_resize, write_map=write_map)
 
     return image
@@ -405,9 +405,9 @@ def ReplaceEntries(image_fname, input_fname, indir, entry_paths,
         if len(entry_paths) != 1:
             raise ValueError('Must specify exactly one entry path to write with -f')
         entry = image.FindEntryPath(entry_paths[0])
-        data = tools.read_file(input_fname)
-        tout.notice("Read %#x bytes from file '%s'" % (len(data), input_fname))
-        WriteEntryToImage(image, entry, data, do_compress=do_compress,
+        new_entry = Image.FromFile(input_fname)
+        tout.notice("Read %#x bytes from file '%s'" % (new_entry.size, input_fname))
+        WriteEntryToImage(image, entry, new_entry, do_compress=do_compress,
                           allow_resize=allow_resize, write_map=write_map)
         return
 
@@ -432,8 +432,8 @@ def ReplaceEntries(image_fname, input_fname, indir, entry_paths,
         if os.path.exists(fname):
             tout.notice("Write entry '%s' from file '%s'" %
                         (entry.GetPath(), fname))
-            data = tools.read_file(fname)
-            ReplaceOneEntry(image, entry, data, do_compress, allow_resize)
+            new_entry = Image.FromFile(fname)
+            ReplaceOneEntry(image, entry, new_entry, do_compress, allow_resize)
         else:
             tout.warning("Skipping entry '%s' from missing file '%s'" %
                          (entry.GetPath(), fname))
