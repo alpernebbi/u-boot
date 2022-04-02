@@ -9,7 +9,10 @@
 
 """See README for more information"""
 
-from distutils.sysconfig import get_python_lib
+import warnings
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    from distutils.sysconfig import get_python_lib
 import os
 import site
 import sys
