@@ -378,11 +378,8 @@ class CbfsFile(object):
             data = tools.get_bytes(self.erase_byte, self.size)
         else:
             raise ValueError('Unknown type %#x when writing\n' % self.ftype)
-        if attr:
-            attr_pos = hdr_len
-            hdr_len += len(attr)
         if self.cbfs_offset is not None:
-            pad_len = self.cbfs_offset - offset - hdr_len
+            pad_len = self.cbfs_offset - offset - hdr_len - len(attr)
             if pad_len < 0:  # pragma: no cover
                 # Test coverage of this is not available since this should never
                 # happen. It indicates that get_header_len() provided an
@@ -392,8 +389,11 @@ class CbfsFile(object):
                 # possible.
                 raise ValueError("Internal error: CBFS file '%s': Requested offset %#x but current output position is %#x" %
                                  (self.name, self.cbfs_offset, offset))
-            pad = tools.get_bytes(pad_byte, pad_len)
+            pad = tools.get_bytes(0x0, pad_len)
             hdr_len += pad_len
+        if attr:
+            attr_pos = hdr_len
+            hdr_len += len(attr)
 
         # This is the offset of the start of the file's data,
         size = len(content) + len(data)
@@ -409,7 +409,7 @@ class CbfsFile(object):
             # happen. It probably indicates that get_header_len() is broken.
             raise ValueError("Internal error: CBFS file '%s': Expected headers of %#x bytes, got %#d" %
                              (self.name, expected_len, actual_len))
-        return hdr + name + attr + pad + content + data, hdr_len
+        return hdr + name + pad + attr + content + data, hdr_len
 
 
 class CbfsWriter(object):

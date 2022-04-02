@@ -602,6 +602,40 @@ class TestCbfs(unittest.TestCase):
         self.assertEqual(0x20, cbfs.files['u-boot'].cbfs_offset)
         self.assertEqual(0x64, cbfs.files['u-boot-dtb'].cbfs_offset)
 
+    def test_cbfs_offset_compressed(self):
+        """Test a CBFS with compressed files at particular offsets"""
+        if not self.have_lz4:
+            self.skipTest('lz4 --no-frame-crc not available')
+        size = 0x200
+        cbw = CbfsWriter(size)
+        cbw.add_file_raw('u-boot', COMPRESS_DATA, 0x50,
+                         compress=cbfs_util.COMPRESS_LZ4)
+        cbw.add_file_raw('u-boot-dtb', COMPRESS_DATA, 0x140,
+                         compress=cbfs_util.COMPRESS_LZMA)
+        data = cbw.get_data()
+
+        cbfs = self._check_hdr(data, size)
+        self.assertIn('u-boot', cbfs.files)
+        cfile = cbfs.files['u-boot']
+        self.assertEqual(cfile.name, 'u-boot')
+        self.assertEqual(cfile.cbfs_offset, 0x50)
+        self.assertEqual(cfile.data, COMPRESS_DATA)
+        self.assertEqual(cfile.ftype, cbfs_util.TYPE_RAW)
+        self.assertEqual(cfile.compress, cbfs_util.COMPRESS_LZ4)
+        self.assertEqual(cfile.memlen, len(COMPRESS_DATA))
+
+        self.assertIn('u-boot-dtb', cbfs.files)
+        cfile = cbfs.files['u-boot-dtb']
+        self.assertEqual(cfile.name, 'u-boot-dtb')
+        self.assertEqual(cfile.cbfs_offset, 0x140)
+        self.assertEqual(cfile.data, COMPRESS_DATA)
+        self.assertEqual(cfile.ftype, cbfs_util.TYPE_RAW)
+        self.assertEqual(cfile.compress, cbfs_util.COMPRESS_LZMA)
+        self.assertEqual(cfile.memlen, len(COMPRESS_DATA))
+
+        cbfs_fname = self._get_expected_cbfs(
+            size=size, base=(0x50, 0x140), compress=['lz4', 'lzma'])
+        self._compare_expected_cbfs(data, cbfs_fname)
 
 if __name__ == '__main__':
     unittest.main()
