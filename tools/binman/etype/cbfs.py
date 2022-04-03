@@ -214,7 +214,8 @@ class Entry_cbfs(Entry):
                                       entry._cbfs_compress)
         elif entry._type == 'stage':
             cfile = cbfs.add_file_stage(entry._cbfs_name, data,
-                                        entry._cbfs_offset)
+                                        entry._cbfs_offset,
+                                        entry._cbfs_compress)
         elif entry._type == 'legacy-stage':
             cfile = cbfs.add_file_legacy_stage(entry._cbfs_name, data,
                                                entry._cbfs_offset)

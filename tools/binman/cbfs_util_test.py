@@ -674,6 +674,47 @@ class TestCbfs(unittest.TestCase):
                 self.skipTest("Cbfstool creates stages in legacy format")
             self._compare_expected_cbfs(data, cbfs_fname)
 
+    def test_cbfs_stage_compressed(self):
+        """Test that we can add a compressed new-format stage to a CBFS"""
+        if not elf.ELF_TOOLS:
+            self.skipTest('Python elftools not available')
+        elf_fname = os.path.join(self._indir, 'cbfs-stage.elf')
+        elf.MakeElf(elf_fname, COMPRESS_DATA, U_BOOT_DTB_DATA)
+        elf_data = tools.read_file(elf_fname)
+
+        size = 0x200
+        cbw = CbfsWriter(size)
+        cbw.add_file_stage('u-boot', elf_data,
+                           compress=cbfs_util.COMPRESS_LZMA)
+
+        data = cbw.get_data()
+        cbfs = self._check_hdr(data, size)
+        load = 0xfef20000
+        entry = load + 2
+
+        self.assertIn('u-boot', cbfs.files)
+        cfile = cbfs.files['u-boot']
+        self.assertEqual(cfile.name, 'u-boot')
+        self.assertEqual(cfile.offset, 0x48)
+        self.assertEqual(cfile.cbfs_offset, 0x48)
+        self.assertEqual(cfile.data, COMPRESS_DATA + U_BOOT_DTB_DATA)
+        self.assertEqual(cfile.ftype, cbfs_util.TYPE_STAGE)
+        self.assertEqual(cfile.compress, cbfs_util.COMPRESS_LZMA)
+        self.assertEqual(cfile.memlen, len(COMPRESS_DATA + U_BOOT_DTB_DATA))
+        self.assertEqual(cfile.entry, entry)
+        self.assertEqual(cfile.load, load)
+
+        # Compare against what cbfstool creates
+        if self.have_cbfstool:
+            cbfs_fname = os.path.join(self._indir, 'test.cbfs')
+            self.cbfstool.create_new(cbfs_fname, size)
+            self.cbfstool.add_stage(cbfs_fname, 'u-boot', elf_fname,
+                                    compress='lzma')
+            expect = tools.read_file(cbfs_fname)
+            if b'StgH' not in expect[:0x40]:
+                self.skipTest("Cbfstool creates stages in legacy format")
+            self._compare_expected_cbfs(data, cbfs_fname)
+
 
 if __name__ == '__main__':
     unittest.main()

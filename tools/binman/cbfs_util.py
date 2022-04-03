@@ -260,7 +260,7 @@ class CbfsFile(object):
         self.data_len = len(indata)
 
     @classmethod
-    def stage(cls, base_address, name, data, cbfs_offset):
+    def stage(cls, base_address, name, data, cbfs_offset, compress):
         """Create a new stage file
 
         Args:
@@ -270,11 +270,12 @@ class CbfsFile(object):
             data: Contents of file
             cbfs_offset: Offset of file data in bytes from start of CBFS, or
                 None to place this file anyway
+            compress: Compression algorithm to use (COMPRESS_...)
 
         Returns:
             CbfsFile object containing the file information
         """
-        cfile = CbfsFile(name, TYPE_STAGE, data, cbfs_offset)
+        cfile = CbfsFile(name, TYPE_STAGE, data, cbfs_offset, compress)
         cfile.base_address = base_address
         return cfile
 
@@ -358,6 +359,8 @@ class CbfsFile(object):
             pass
         elif self.ftype == TYPE_STAGE:
             hdr_len += ATTR_STAGEHEADER_LEN
+            if self.compress != COMPRESS_NONE:
+                hdr_len += ATTR_COMPRESSION_LEN
         elif self.ftype == TYPE_RAW:
             if self.compress != COMPRESS_NONE:
                 hdr_len += ATTR_COMPRESSION_LEN
@@ -386,11 +389,22 @@ class CbfsFile(object):
         data = self.data
         if self.ftype == TYPE_STAGE:
             elf_data = elf.DecodeElf(data, self.base_address)
-            data = elf_data.data
+            orig_data = data = elf_data.data
+            if self.compress == COMPRESS_LZ4:
+                data = comp_util.compress(orig_data, 'lz4', with_header=False)
+            elif self.compress == COMPRESS_LZMA:
+                data = comp_util.compress(orig_data, 'lzma', with_header=False)
+            self.memlen = len(orig_data)
+            self.data_len = len(data)
             attr = struct.pack(ATTR_STAGEHEADER_FORMAT,
                                FILE_ATTR_TAG_STAGEHEADER, ATTR_STAGEHEADER_LEN,
                                elf_data.load, elf_data.entry - elf_data.load,
-                               len(data))
+                               self.memlen)
+            if self.compress != COMPRESS_NONE:
+                attr += struct.pack(ATTR_COMPRESSION_FORMAT,
+                                    FILE_ATTR_TAG_COMPRESSION,
+                                    ATTR_COMPRESSION_LEN,
+                                    self.compress, self.memlen)
         elif self.ftype == TYPE_LEGACY_STAGE:
             elf_data = elf.DecodeElf(data, self.base_address)
             content = struct.pack(LEGACY_STAGE_FORMAT, self.compress,
@@ -557,7 +571,8 @@ class CbfsWriter(object):
         if offset < self._size:
             self._skip_to(fd, offset)
 
-    def add_file_stage(self, name, data, cbfs_offset=None):
+    def add_file_stage(self, name, data, cbfs_offset=None,
+                       compress=COMPRESS_NONE):
         """Add a new stage file to the CBFS in the legacy format
 
         Args:
@@ -566,11 +581,13 @@ class CbfsWriter(object):
             data: Contents of file
             cbfs_offset: Offset of this file's data within the CBFS, in bytes,
                 or None to place this file anywhere
+            compress: Compression algorithm to use (COMPRESS_...)
 
         Returns:
             CbfsFile object created
         """
-        cfile = CbfsFile.stage(self._base_address, name, data, cbfs_offset)
+        cfile = CbfsFile.stage(self._base_address, name, data,
+                               cbfs_offset, compress)
         self._files[name] = cfile
         return cfile
 
@@ -802,7 +819,8 @@ class CbfsReader(object):
         elif ftype == TYPE_STAGE:
             data = fd.read(size)
             cfile = CbfsFile.stage(self.stage_base_address, name, data,
-                                   cbfs_offset)
+                                   cbfs_offset, attrs['compress'])
+            cfile.decompress()
             cfile.load = attrs['loadaddr']
             cfile.entry = attrs['loadaddr'] + attrs['entry_offset']
             cfile.memlen = attrs['memlen']

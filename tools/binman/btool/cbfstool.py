@@ -168,7 +168,7 @@ class Bintoolcbfstool(bintool.Bintool):
             args += ['-b', f'{base:#x}']
         return self.run_cmd(*args)
 
-    def add_stage(self, cbfs_fname, name, fname):
+    def add_stage(self, cbfs_fname, name, fname, compress=None):
         """Add a stage file to the CBFS
 
         Args:
@@ -182,7 +182,8 @@ class Bintoolcbfstool(bintool.Bintool):
         args = [cbfs_fname,
                 'add-stage',
                 '-n', name,
-                '-f', fname
+                '-f', fname,
+                '-c', compress or 'none',
             ]
         return self.run_cmd(*args)
 
