@@ -52,6 +52,10 @@ LEGACY_STAGE_LEN    = 0x1c
 ATTR_COMPRESSION_FORMAT = '>IIII'
 ATTR_COMPRESSION_LEN = 0x10
 
+# An attribute describring the load address, entry offset, size of a stage
+ATTR_STAGEHEADER_FORMAT = '>IIQII'
+ATTR_STAGEHEADER_LEN = 0x18
+
 # Attribute tags
 # Depending on how the header was initialised, it may be backed with 0x00 or
 # 0xff. Support both.
@@ -62,6 +66,7 @@ FILE_ATTR_TAG_HASH          = 0x68736148
 FILE_ATTR_TAG_POSITION      = 0x42435350  # PSCB
 FILE_ATTR_TAG_ALIGNMENT     = 0x42434c41  # ALCB
 FILE_ATTR_TAG_PADDING       = 0x47444150  # PDNG
+FILE_ATTR_TAG_STAGEHEADER   = 0x53746748  # StgH
 
 # This is 'the size of bootblock reserved in firmware image (cbfs.txt)'
 # Not much more info is available, but we set it to 4, due to this comment in
@@ -104,6 +109,7 @@ ARCH_NAMES = {
 TYPE_CBFSHEADER     = 0x02   # Master header, HEADER_FORMAT
 TYPE_LEGACY_STAGE   = 0x10   # Stage (legacy format), holding an executable,
                              # see LEGACY_STAGE_FORMAT above.
+TYPE_STAGE          = 0x11   # Stage, holding an executable
 TYPE_RAW            = 0x50   # Raw file, possibly compressed
 TYPE_EMPTY          = 0xffffffff     # Empty data
 
@@ -254,6 +260,25 @@ class CbfsFile(object):
         self.data_len = len(indata)
 
     @classmethod
+    def stage(cls, base_address, name, data, cbfs_offset):
+        """Create a new stage file
+
+        Args:
+            base_address: Int base address for memory-mapping of ELF file
+            name: String file name to put in CBFS (does not need to correspond
+                to the name that the file originally came from)
+            data: Contents of file
+            cbfs_offset: Offset of file data in bytes from start of CBFS, or
+                None to place this file anyway
+
+        Returns:
+            CbfsFile object containing the file information
+        """
+        cfile = CbfsFile(name, TYPE_STAGE, data, cbfs_offset)
+        cfile.base_address = base_address
+        return cfile
+
+    @classmethod
     def legacy_stage(cls, base_address, name, data, cbfs_offset):
         """Create a new stage file in the legacy format
 
@@ -331,6 +356,8 @@ class CbfsFile(object):
         hdr_len = len(name) + FILE_HEADER_LEN
         if self.ftype == TYPE_LEGACY_STAGE:
             pass
+        elif self.ftype == TYPE_STAGE:
+            hdr_len += ATTR_STAGEHEADER_LEN
         elif self.ftype == TYPE_RAW:
             if self.compress != COMPRESS_NONE:
                 hdr_len += ATTR_COMPRESSION_LEN
@@ -357,7 +384,14 @@ class CbfsFile(object):
         attr = b''
         pad = b''
         data = self.data
-        if self.ftype == TYPE_LEGACY_STAGE:
+        if self.ftype == TYPE_STAGE:
+            elf_data = elf.DecodeElf(data, self.base_address)
+            data = elf_data.data
+            attr = struct.pack(ATTR_STAGEHEADER_FORMAT,
+                               FILE_ATTR_TAG_STAGEHEADER, ATTR_STAGEHEADER_LEN,
+                               elf_data.load, elf_data.entry - elf_data.load,
+                               elf_data.memsize)
+        elif self.ftype == TYPE_LEGACY_STAGE:
             elf_data = elf.DecodeElf(data, self.base_address)
             content = struct.pack(LEGACY_STAGE_FORMAT, self.compress,
                                   elf_data.entry, elf_data.load,
@@ -522,6 +556,23 @@ class CbfsWriter(object):
         offset = align_int(fd.tell(), align)
         if offset < self._size:
             self._skip_to(fd, offset)
+
+    def add_file_stage(self, name, data, cbfs_offset=None):
+        """Add a new stage file to the CBFS in the legacy format
+
+        Args:
+            name: String file name to put in CBFS (does not need to correspond
+                to the name that the file originally came from)
+            data: Contents of file
+            cbfs_offset: Offset of this file's data within the CBFS, in bytes,
+                or None to place this file anywhere
+
+        Returns:
+            CbfsFile object created
+        """
+        cfile = CbfsFile.stage(self._base_address, name, data, cbfs_offset)
+        self._files[name] = cfile
+        return cfile
 
     def add_file_legacy_stage(self, name, data, cbfs_offset=None):
         """Add a new stage file to the CBFS in the legacy format
@@ -738,8 +789,8 @@ class CbfsReader(object):
             print('name', name)
 
         # If there are attribute headers present, read those
-        compress = self._read_attr(fd, file_pos, attr, offset)
-        if compress is None:
+        attrs = self._read_attr(fd, file_pos, attr, offset)
+        if attrs is None:
             return False
 
         # Create the correct CbfsFile object depending on the type
@@ -748,6 +799,13 @@ class CbfsReader(object):
         fd.seek(cbfs_offset, io.SEEK_SET)
         if ftype == TYPE_CBFSHEADER:
             self._read_header(fd)
+        elif ftype == TYPE_STAGE:
+            data = fd.read(size)
+            cfile = CbfsFile.stage(self.stage_base_address, name, data,
+                                   cbfs_offset)
+            cfile.load = attrs['loadaddr']
+            cfile.entry = attrs['loadaddr'] + attrs['entry_offset']
+            cfile.memlen = attrs['memlen']
         elif ftype == TYPE_LEGACY_STAGE:
             data = fd.read(LEGACY_STAGE_LEN)
             cfile = CbfsFile.legacy_stage(self.stage_base_address,
@@ -757,7 +815,7 @@ class CbfsReader(object):
             cfile.data = fd.read(cfile.data_len)
         elif ftype == TYPE_RAW:
             data = fd.read(size)
-            cfile = CbfsFile.raw(name, data, cbfs_offset, compress)
+            cfile = CbfsFile.raw(name, data, cbfs_offset, attrs['compress'])
             cfile.decompress()
             if DEBUG:
                 print('data', data)
@@ -794,9 +852,11 @@ class CbfsReader(object):
         Returns:
             Compression to use for the file (COMPRESS_...)
         """
-        compress = COMPRESS_NONE
+        attr_dict = {
+            'compress': COMPRESS_NONE,
+        }
         if not attr:
-            return compress
+            return attr_dict
         attr_size = offset - attr
         fd.seek(file_pos + attr, io.SEEK_SET)
         while attr_size:
@@ -811,12 +871,20 @@ class CbfsReader(object):
                 # We don't currently use this information
                 atag, alen, compress, _decomp_size = struct.unpack(
                     ATTR_COMPRESSION_FORMAT, data)
+                attr_dict['compress'] = compress
+                attr_dict['decompressed_size'] = _decomp_size
+            elif atag == FILE_ATTR_TAG_STAGEHEADER:
+                atag, alen, load, entry_offset, memlen = struct.unpack(
+                    ATTR_STAGEHEADER_FORMAT, data)
+                attr_dict['loadaddr'] = load
+                attr_dict['entry_offset'] = entry_offset
+                attr_dict['memlen'] = memlen
             elif atag == FILE_ATTR_TAG_UNUSED2:
                 break
             else:
                 print('Unknown attribute tag %x' % atag)
             attr_size -= len(data)
-        return compress
+        return attr_dict
 
     def _read_header(self, fd):
         """Read the master header

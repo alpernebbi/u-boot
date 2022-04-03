@@ -640,5 +640,40 @@ class TestCbfs(unittest.TestCase):
             size=size, base=(0x50, 0x140), compress=['lz4', 'lzma'])
         self._compare_expected_cbfs(data, cbfs_fname)
 
+    def test_cbfs_stage(self):
+        """Test that we can add a new-format stage to a CBFS"""
+        if not elf.ELF_TOOLS:
+            self.skipTest('Python elftools not available')
+        elf_fname = os.path.join(self._indir, 'cbfs-stage.elf')
+        elf.MakeElf(elf_fname, U_BOOT_DATA, U_BOOT_DTB_DATA)
+
+        size = 0xb0
+        cbw = CbfsWriter(size)
+        cbw.add_file_stage('u-boot', tools.read_file(elf_fname))
+
+        data = cbw.get_data()
+        cbfs = self._check_hdr(data, size)
+        load = 0xfef20000
+        entry = load + 2
+
+        cfile = self._check_uboot(cbfs, cbfs_util.TYPE_STAGE,
+                offset=0x38, data=U_BOOT_DATA + U_BOOT_DTB_DATA)
+
+        self.assertEqual(entry, cfile.entry)
+        self.assertEqual(load, cfile.load)
+        self.assertEqual(len(U_BOOT_DATA) + len(U_BOOT_DTB_DATA),
+                         cfile.data_len)
+
+        # Compare against what cbfstool creates
+        if self.have_cbfstool:
+            cbfs_fname = os.path.join(self._indir, 'test.cbfs')
+            self.cbfstool.create_new(cbfs_fname, size)
+            self.cbfstool.add_stage(cbfs_fname, 'u-boot', elf_fname)
+            expect = tools.read_file(cbfs_fname)
+            if b'StgH' not in expect[:0x40]:
+                self.skipTest("Cbfstool creates stages in legacy format")
+            self._compare_expected_cbfs(data, cbfs_fname)
+
+
 if __name__ == '__main__':
     unittest.main()
