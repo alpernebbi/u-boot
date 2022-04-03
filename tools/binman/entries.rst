@@ -363,6 +363,13 @@ cbfs-type:
         to add a flat binary with a load/start address, similar to the
         'add-flat-binary' option in cbfstool.
 
+    legacy-stage:
+        This is the same as 'stage', but with an older internal format that
+        embeds load/entry address and size information in a header prepended
+        to the data, instead of storing them inside a CBFS attribute.
+        Whether you need to use 'stage' or 'legacy-stage' depends on your
+        coreboot build's version.
+
 cbfs-offset:
     This is the offset of the file's data within the CBFS. It is used to
     specify where the file should be placed in cases where a fixed position

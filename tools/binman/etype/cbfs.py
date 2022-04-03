@@ -114,6 +114,13 @@ class Entry_cbfs(Entry):
             to add a flat binary with a load/start address, similar to the
             'add-flat-binary' option in cbfstool.
 
+        legacy-stage:
+            This is the same as 'stage', but with an older internal format that
+            embeds load/entry address and size information in a header prepended
+            to the data, instead of storing them inside a CBFS attribute.
+            Whether you need to use 'stage' or 'legacy-stage' depends on your
+            coreboot build's version.
+
     cbfs-offset:
         This is the offset of the file's data within the CBFS. It is used to
         specify where the file should be placed in cases where a fixed position
@@ -205,12 +212,11 @@ class Entry_cbfs(Entry):
             cfile = cbfs.add_file_raw(entry._cbfs_name, data,
                                       entry._cbfs_offset,
                                       entry._cbfs_compress)
-        elif entry._type == 'stage':
-            cfile = cbfs.add_file_stage(entry._cbfs_name, data,
-                                        entry._cbfs_offset)
+        elif entry._type == 'legacy-stage':
+            cfile = cbfs.add_file_legacy_stage(entry._cbfs_name, data,
+                                               entry._cbfs_offset)
         else:
-            entry.Raise("Unknown cbfs-type '%s' (use 'raw', 'stage')" %
-                        entry._type)
+            entry.Raise(f"Unknown cbfs-type '{entry._type}'")
         return cfile
 
     def ObtainContents(self, skip_entry=None):

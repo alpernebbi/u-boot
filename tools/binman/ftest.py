@@ -2261,7 +2261,7 @@ class TestFunctional(unittest.TestCase):
         cfile = cbfs.files['u-boot-dtb']
         self.assertEqual(U_BOOT_DTB_DATA, cfile.data)
 
-    def testCbfsStage(self):
+    def testCbfsLegacyStage(self):
         """Tests handling of a Coreboot Filesystem (CBFS)"""
         if not elf.ELF_TOOLS:
             self.skipTest('Python elftools not available')
@@ -2269,7 +2269,7 @@ class TestFunctional(unittest.TestCase):
         elf.MakeElf(elf_fname, U_BOOT_DATA, U_BOOT_DTB_DATA)
         size = 0xb0
 
-        data = self._DoReadFile('104_cbfs_stage.dts')
+        data = self._DoReadFile('104_cbfs_legacy_stage.dts')
         cbfs = cbfs_util.CbfsReader(data)
         self.assertEqual(size, cbfs.rom_size)
 
