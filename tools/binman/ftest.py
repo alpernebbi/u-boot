@@ -5523,5 +5523,21 @@ fdt         fdtmap                Extract the devicetree blob from the fdtmap
         with self.assertRaises(ValueError) as e:
             data = self._DoReadFile('231_pre_load_invalid_key.dts')
 
+    def testCbfsStage(self):
+        """Tests handling of a Coreboot Filesystem (CBFS)"""
+        if not elf.ELF_TOOLS:
+            self.skipTest('Python elftools not available')
+        elf_fname = os.path.join(self._indir, 'cbfs-stage.elf')
+        elf.MakeElf(elf_fname, U_BOOT_DATA, U_BOOT_DTB_DATA)
+        size = 0xb0
+
+        data = self._DoReadFile('232_cbfs_stage.dts')
+        cbfs = cbfs_util.CbfsReader(data)
+        self.assertEqual(size, cbfs.rom_size)
+
+        self.assertIn('u-boot', cbfs.files)
+        cfile = cbfs.files['u-boot']
+        self.assertEqual(U_BOOT_DATA + U_BOOT_DTB_DATA, cfile.data)
+
 if __name__ == "__main__":
     unittest.main()
