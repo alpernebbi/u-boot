@@ -12,7 +12,7 @@
 			u-boot {
 				type = "blob";
 				filename = "cbfs-stage.elf";
-				cbfs-type = "stage";
+				cbfs-type = "legacy-stage";
 			};
 		};
 	};

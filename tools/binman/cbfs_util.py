@@ -43,10 +43,10 @@ FILE_HEADER_FORMAT = b'>8sIIII'
 FILE_HEADER_LEN    = 0x18
 FILE_MAGIC         = b'LARCHIVE'
 
-# A stage header containing information about 'stage' files
+# A legacy stage header containing information about 'stage' files
 # Yes this is correct: this header is in litte-endian format
-STAGE_FORMAT       = '<IQQII'
-STAGE_LEN          = 0x1c
+LEGACY_STAGE_FORMAT = '<IQQII'
+LEGACY_STAGE_LEN    = 0x1c
 
 # An attribute describring the compression used in a file
 ATTR_COMPRESSION_FORMAT = '>IIII'
@@ -102,7 +102,8 @@ ARCH_NAMES = {
 
 # File types. Only supported ones are included here
 TYPE_CBFSHEADER     = 0x02   # Master header, HEADER_FORMAT
-TYPE_STAGE          = 0x10   # Stage, holding an executable, see STAGE_FORMAT
+TYPE_LEGACY_STAGE   = 0x10   # Stage (legacy format), holding an executable,
+                             # see LEGACY_STAGE_FORMAT above.
 TYPE_RAW            = 0x50   # Raw file, possibly compressed
 TYPE_EMPTY          = 0xffffffff     # Empty data
 
@@ -253,8 +254,8 @@ class CbfsFile(object):
         self.data_len = len(indata)
 
     @classmethod
-    def stage(cls, base_address, name, data, cbfs_offset):
-        """Create a new stage file
+    def legacy_stage(cls, base_address, name, data, cbfs_offset):
+        """Create a new stage file in the legacy format
 
         Args:
             base_address: Int base address for memory-mapping of ELF file
@@ -267,7 +268,7 @@ class CbfsFile(object):
         Returns:
             CbfsFile object containing the file information
         """
-        cfile = CbfsFile(name, TYPE_STAGE, data, cbfs_offset)
+        cfile = CbfsFile(name, TYPE_LEGACY_STAGE, data, cbfs_offset)
         cfile.base_address = base_address
         return cfile
 
@@ -328,7 +329,7 @@ class CbfsFile(object):
         """
         name = _pack_string(self.name)
         hdr_len = len(name) + FILE_HEADER_LEN
-        if self.ftype == TYPE_STAGE:
+        if self.ftype == TYPE_LEGACY_STAGE:
             pass
         elif self.ftype == TYPE_RAW:
             if self.compress != COMPRESS_NONE:
@@ -356,9 +357,9 @@ class CbfsFile(object):
         attr = b''
         pad = b''
         data = self.data
-        if self.ftype == TYPE_STAGE:
+        if self.ftype == TYPE_LEGACY_STAGE:
             elf_data = elf.DecodeElf(data, self.base_address)
-            content = struct.pack(STAGE_FORMAT, self.compress,
+            content = struct.pack(LEGACY_STAGE_FORMAT, self.compress,
                                   elf_data.entry, elf_data.load,
                                   len(elf_data.data), elf_data.memsize)
             data = elf_data.data
@@ -522,8 +523,8 @@ class CbfsWriter(object):
         if offset < self._size:
             self._skip_to(fd, offset)
 
-    def add_file_stage(self, name, data, cbfs_offset=None):
-        """Add a new stage file to the CBFS
+    def add_file_legacy_stage(self, name, data, cbfs_offset=None):
+        """Add a new stage file to the CBFS in the legacy format
 
         Args:
             name: String file name to put in CBFS (does not need to correspond
@@ -535,7 +536,8 @@ class CbfsWriter(object):
         Returns:
             CbfsFile object created
         """
-        cfile = CbfsFile.stage(self._base_address, name, data, cbfs_offset)
+        cfile = CbfsFile.legacy_stage(self._base_address, name, data,
+                                      cbfs_offset)
         self._files[name] = cfile
         return cfile
 
@@ -746,12 +748,12 @@ class CbfsReader(object):
         fd.seek(cbfs_offset, io.SEEK_SET)
         if ftype == TYPE_CBFSHEADER:
             self._read_header(fd)
-        elif ftype == TYPE_STAGE:
-            data = fd.read(STAGE_LEN)
-            cfile = CbfsFile.stage(self.stage_base_address, name, b'',
-                                   cbfs_offset)
+        elif ftype == TYPE_LEGACY_STAGE:
+            data = fd.read(LEGACY_STAGE_LEN)
+            cfile = CbfsFile.legacy_stage(self.stage_base_address,
+                                          name, b'', cbfs_offset)
             (cfile.compress, cfile.entry, cfile.load, cfile.data_len,
-             cfile.memlen) = struct.unpack(STAGE_FORMAT, data)
+             cfile.memlen) = struct.unpack(LEGACY_STAGE_FORMAT, data)
             cfile.data = fd.read(cfile.data_len)
         elif ftype == TYPE_RAW:
             data = fd.read(size)
