@@ -52,8 +52,8 @@ u32 *boot_params_ptr = NULL;
 
 #if CONFIG_IS_ENABLED(BINMAN_SYMBOLS)
 /* See spl.h for information about this */
-binman_sym_declare(ulong, u_boot_any, image_pos);
-binman_sym_declare(ulong, u_boot_any, size);
+binman_sym_declare_optional(ulong, u_boot_any, image_pos);
+binman_sym_declare_optional(ulong, u_boot_any, size);
 #endif
 
 #ifdef CONFIG_TPL
