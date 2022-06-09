@@ -55,7 +55,6 @@ u32 *boot_params_ptr = NULL;
 /* See spl.h for information about this */
 binman_sym_declare(ulong, u_boot_any, image_pos);
 binman_sym_declare(ulong, u_boot_any, size);
-#endif
 
 #ifdef CONFIG_TPL
 binman_sym_declare(ulong, u_boot_spl, image_pos);
@@ -66,6 +65,8 @@ binman_sym_declare(ulong, u_boot_spl, size);
 binman_sym_declare(ulong, u_boot_vpl, image_pos);
 binman_sym_declare(ulong, u_boot_vpl, size);
 #endif
+
+#endif /* BINMAN_SYMBOLS */
 
 /* Define board data structure */
 static struct bd_info bdata __attribute__ ((section(".data")));
