@@ -34,6 +34,16 @@ F:	board/google/veyron/
 F:	include/configs/veyron.h
 F:	configs/chromebook_speedy_defconfig
 
+CHROMEBOOK MIGHTY BOARD
+M:	Simon Glass <sjg@chromium.org>
+M:	Alper Nebi Yasak <alpernebiyasak@gmail.com>
+S:	Maintained
+F:	arch/arm/dts/rk3288-veyron-mighty.dts
+F:	arch/arm/dts/rk3288-veyron-mighty-u-boot.dtsi
+F:	board/google/veyron/
+F:	include/configs/veyron.h
+F:	configs/chromebook_mighty_defconfig
+
 CHROMEBOOK VEYRON COMMON FILES
 M:	Simon Glass <sjg@chromium.org>
 S:	Maintained
