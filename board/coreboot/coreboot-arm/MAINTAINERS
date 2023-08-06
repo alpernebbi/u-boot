@@ -1,0 +1,11 @@
+COREBOOT_ARM BOARD
+M:	Alper Nebi Yasak <alpernebiyasak@gmail.com>
+S:	Maintained
+F:	board/coreboot/coreboot-arm
+F:	include/configs/coreboot-arm.h
+F:	configs/coreboot-arm_defconfig
+
+COREBOOT_ARM64 BOARD
+M:	Alper Nebi Yasak <alpernebiyasak@gmail.com>
+S:	Maintained
+F:	configs/coreboot-arm64_defconfig

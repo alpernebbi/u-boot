@@ -1033,6 +1033,19 @@ config ARCH_APPLE
 	imply BOOTSTD_FULL
 	imply OF_HAS_PRIOR_STAGE
 
+config ARCH_COREBOOT
+	bool "Coreboot Payload"
+	select DM
+	select DM_SERIAL
+	select OF_CONTROL
+	select POSITION_INDEPENDENT
+	select PL01X_SERIAL
+	imply CMD_DM
+	imply DM_RNG
+	imply DM_RTC
+	imply RTC_PL031
+	imply OF_HAS_PRIOR_STAGE
+
 config ARCH_OWL
 	bool "Actions Semi OWL SoCs"
 	select DM
@@ -2254,6 +2267,8 @@ source "arch/arm/mach-bcmbca/Kconfig"
 
 source "arch/arm/mach-bcmstb/Kconfig"
 
+source "arch/arm/mach-coreboot/Kconfig"
+
 source "arch/arm/mach-davinci/Kconfig"
 
 source "arch/arm/mach-exynos/Kconfig"
@@ -2378,6 +2393,7 @@ source "board/Marvell/octeontx/Kconfig"
 source "board/Marvell/octeontx2/Kconfig"
 source "board/armltd/vexpress/Kconfig"
 source "board/armltd/vexpress64/Kconfig"
+source "board/coreboot/coreboot-arm/Kconfig"
 source "board/cortina/presidio-asic/Kconfig"
 source "board/broadcom/bcmns/Kconfig"
 source "board/broadcom/bcmns3/Kconfig"

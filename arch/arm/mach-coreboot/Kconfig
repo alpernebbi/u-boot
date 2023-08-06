@@ -1,0 +1,30 @@
+if ARCH_COREBOOT
+
+config SYS_VENDOR
+	default "coreboot"
+
+config SYS_BOARD
+	default "coreboot-arm"
+
+config SYS_CONFIG_NAME
+	default "coreboot-arm"
+
+choice
+	prompt "coreboot ARM architecture"
+	default TARGET_COREBOOT_ARM_64BIT
+
+config TARGET_COREBOOT_ARM_32BIT
+	bool "Coreboot payload on ARMv7-A, 32bit"
+	select ARCH_SUPPORT_PSCI
+	select BOARD_LATE_INIT
+	select CPU_V7A
+	select SYS_ARCH_TIMER
+
+config TARGET_COREBOOT_ARM_64BIT
+	bool "Coreboot payload on ARMv8, 64bit"
+	select ARM64
+	select BOARD_LATE_INIT
+
+endchoice
+
+endif
