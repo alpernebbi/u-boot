@@ -174,6 +174,7 @@ UCLASS_DRIVER(qfw) = {
 	.name		= "qfw",
 	.post_bind	= qfw_post_bind,
 	.per_device_auto	= sizeof(struct qfw_dev),
+	.flags = DM_FLAG_PRE_RELOC,
 };
 
 struct bootdev_ops qfw_bootdev_ops = {

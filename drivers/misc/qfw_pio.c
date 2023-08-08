@@ -66,4 +66,5 @@ U_BOOT_DRIVER(qfw_pio) = {
 	.id	= UCLASS_QFW,
 	.probe	= qfw_pio_probe,
 	.ops	= &qfw_pio_ops,
+	.flags = DM_FLAG_PRE_RELOC,
 };
