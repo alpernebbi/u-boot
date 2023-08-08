@@ -120,6 +120,7 @@ U_BOOT_DRIVER(qfw_sandbox) = {
 	.plat_auto	= sizeof(struct qfw_sandbox_plat),
 	.probe	= qfw_sandbox_probe,
 	.ops	= &qfw_sandbox_ops,
+	.flags = DM_FLAG_PRE_RELOC,
 };
 
 U_BOOT_DRVINFO(qfw_sandbox) = {
