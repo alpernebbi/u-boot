@@ -3,6 +3,7 @@
  * Copyright 2018 Google
  */
 
+#include <cpu_func.h>
 #include <dm.h>
 #include <init.h>
 #include <asm/arch-rockchip/clock.h>
@@ -28,6 +29,19 @@ int board_early_init_f(void)
 		sum += i;
 	gru_dummy_function(sum);
 #endif /* CONFIG_TARGET_CHROMEBOOK_BOB */
+
+	return 0;
+}
+#else
+int board_early_init_f(void)
+{
+	/*
+	 * When chain-loading U-Boot, the dcache might be enabled in a
+	 * degraded state somehow. Disable it here so that the common
+	 * boot flow re-enables it and fixes things.
+	 */
+	if (dcache_status())
+		dcache_disable();
 
 	return 0;
 }
