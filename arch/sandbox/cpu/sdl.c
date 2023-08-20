@@ -189,8 +189,10 @@ int sandbox_sdl_init_display(int width, int height, int log2_bpp,
 	return 0;
 }
 
-static int copy_to_texture(void *lcd_base)
+static int copy_to_texture(void *lcd_base, int xstart, int ystart,
+			   int xend, int yend)
 {
+	struct SDL_Rect rect;
 	char *dest;
 	int pitch, x, y;
 	int src_pitch;
@@ -198,8 +200,15 @@ static int copy_to_texture(void *lcd_base)
 	char *src;
 	int ret;
 
+	rect.x = xstart;
+	rect.y = ystart;
+	rect.w = xend - xstart + 1;
+	rect.h = yend - ystart + 1;
+
 	if (sdl.src_depth == sdl.depth) {
-		SDL_UpdateTexture(sdl.texture, NULL, lcd_base, sdl.pitch);
+		src_pitch = sdl.width * sdl.src_depth / 8;
+		src = lcd_base + src_pitch * rect.y + rect.x * sdl.src_depth / 8;
+		SDL_UpdateTexture(sdl.texture, &rect, src, src_pitch);
 		return 0;
 	}
 
@@ -212,7 +221,7 @@ static int copy_to_texture(void *lcd_base)
 		return -EINVAL;
 	}
 
-	ret = SDL_LockTexture(sdl.texture, NULL, &pixels, &pitch);
+	ret = SDL_LockTexture(sdl.texture, &rect, &pixels, &pitch);
 	if (ret) {
 		printf("SDL lock %d: %s\n", ret, SDL_GetError());
 		return ret;
@@ -220,12 +229,12 @@ static int copy_to_texture(void *lcd_base)
 
 	/* Copy the pixels one by one */
 	src_pitch = sdl.width * sdl.src_depth / 8;
-	for (y = 0; y < sdl.height; y++) {
+	for (y = 0; y < rect.h; y++) {
 		char val;
 
 		dest = pixels + y * pitch;
-		src = lcd_base + src_pitch * y;
-		for (x = 0; x < sdl.width; x++, dest += 4) {
+		src = lcd_base + src_pitch * (ystart + y) + xstart;
+		for (x = 0; x < rect.w; x++, dest += 4) {
 			val = *src++;
 			dest[0] = val;
 			dest[1] = val;
@@ -238,7 +247,7 @@ static int copy_to_texture(void *lcd_base)
 	return 0;
 }
 
-int sandbox_sdl_sync(void *lcd_base)
+int sandbox_sdl_sync(void *lcd_base, int xstart, int ystart, int xend, int yend)
 {
 	struct SDL_Rect rect;
 	int ret;
@@ -246,7 +255,7 @@ int sandbox_sdl_sync(void *lcd_base)
 	if (!sdl.texture)
 		return 0;
 	SDL_RenderClear(sdl.renderer);
-	ret = copy_to_texture(lcd_base);
+	ret = copy_to_texture(lcd_base, xstart, ystart, xend, yend);
 	if (ret) {
 		printf("copy_to_texture: %d: %s\n", ret, SDL_GetError());
 		return -EIO;

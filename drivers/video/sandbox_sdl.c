@@ -102,11 +102,25 @@ static int sandbox_sdl_video_sync(struct udevice *dev)
 {
 	struct video_priv *priv = dev_get_uclass_priv(dev);
 	void *fb = priv->fb;
+	int xstart = 0;
+	int ystart = 0;
+	int xend = priv->xsize;
+	int yend = priv->ysize;
 
 	if (IS_ENABLED(CONFIG_VIDEO_COPY))
 		fb = priv->copy_fb;
 
-	return sandbox_sdl_sync(fb);
+	if (IS_ENABLED(CONFIG_VIDEO_DAMAGE)) {
+		if (!priv->damage.xend && !priv->damage.yend)
+			return 0;
+
+		xstart = priv->damage.xstart;
+		ystart = priv->damage.ystart;
+		xend = priv->damage.xend;
+		yend = priv->damage.yend;
+	}
+
+	return sandbox_sdl_sync(fb, xstart, ystart, xend, yend);
 }
 
 static int sandbox_sdl_remove(struct udevice *dev)

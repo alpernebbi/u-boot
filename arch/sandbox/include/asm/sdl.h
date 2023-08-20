@@ -40,9 +40,13 @@ int sandbox_sdl_remove_display(void);
  * user can see it.
  *
  * @lcd_base: Base of frame buffer
+ * @xstart:   X start position of updated region in pixels from the left
+ * @ystart:   Y start position of updated region in pixels from the top
+ * @xend:     X end position of updated region in pixels from the left
+ * @yend:     Y end position of updated region in pixels from the top
  * Return: 0 if screen was updated, -ENODEV is there is no screen.
  */
-int sandbox_sdl_sync(void *lcd_base);
+int sandbox_sdl_sync(void *lcd_base, int xstart, int ystart, int xend, int yend);
 
 /**
  * sandbox_sdl_scan_keys() - scan for pressed keys
@@ -116,7 +120,8 @@ static inline int sandbox_sdl_remove_display(void)
 	return -ENODEV;
 }
 
-static inline int sandbox_sdl_sync(void *lcd_base)
+static inline int sandbox_sdl_sync(void *lcd_base, int xstart, int ystart,
+				   int xend, int yend)
 {
 	return -ENODEV;
 }
