@@ -755,7 +755,7 @@ static int dm_test_video_damage(struct unit_test_state *uts)
 	ut_asserteq(1280, priv->damage.xend);
 	ut_asserteq(510, priv->damage.yend);
 
-	video_sync(dev, false);
+	video_sync(dev, true);
 	ut_asserteq(priv->xsize, priv->damage.xstart);
 	ut_asserteq(priv->ysize, priv->damage.ystart);
 	ut_asserteq(0, priv->damage.xend);

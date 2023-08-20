@@ -22,9 +22,6 @@
 #include <dm/device_compat.h>
 #include <dm/device-internal.h>
 #include <dm/uclass-internal.h>
-#ifdef CONFIG_SANDBOX
-#include <asm/sdl.h>
-#endif
 
 /*
  * Theory of operation:
@@ -449,19 +446,6 @@ int video_sync(struct udevice *vid, bool force)
 
 	if (IS_ENABLED(CONFIG_VIDEO_COPY))
 		video_flush_dcache(vid, true);
-
-#if defined(CONFIG_VIDEO_SANDBOX_SDL)
-	static ulong last_sync;
-	void *fb = priv->fb;
-
-	if (IS_ENABLED(CONFIG_VIDEO_COPY))
-		fb = priv->copy_fb;
-
-	if (force || get_timer(last_sync) > 100) {
-		sandbox_sdl_sync(fb);
-		last_sync = get_timer(0);
-	}
-#endif
 
 	if (IS_ENABLED(CONFIG_VIDEO_DAMAGE)) {
 		priv->damage.xstart = priv->xsize;

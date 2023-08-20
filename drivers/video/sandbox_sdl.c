@@ -98,6 +98,17 @@ int sandbox_sdl_set_bpp(struct udevice *dev, enum video_log2_bpp l2bpp)
 	return 0;
 }
 
+static int sandbox_sdl_video_sync(struct udevice *dev)
+{
+	struct video_priv *priv = dev_get_uclass_priv(dev);
+	void *fb = priv->fb;
+
+	if (IS_ENABLED(CONFIG_VIDEO_COPY))
+		fb = priv->copy_fb;
+
+	return sandbox_sdl_sync(fb);
+}
+
 static int sandbox_sdl_remove(struct udevice *dev)
 {
 	/*
@@ -132,6 +143,10 @@ static const struct udevice_id sandbox_sdl_ids[] = {
 	{ }
 };
 
+static struct video_ops sandbox_sdl_ops = {
+	.video_sync = sandbox_sdl_video_sync,
+};
+
 U_BOOT_DRIVER(sandbox_lcd_sdl) = {
 	.name	= "sandbox_lcd_sdl",
 	.id	= UCLASS_VIDEO,
@@ -140,4 +155,5 @@ U_BOOT_DRIVER(sandbox_lcd_sdl) = {
 	.probe	= sandbox_sdl_probe,
 	.remove	= sandbox_sdl_remove,
 	.plat_auto	= sizeof(struct sandbox_sdl_plat),
+	.ops	= &sandbox_sdl_ops,
 };
