@@ -48,6 +48,7 @@ struct buf_info {
  * @screen: SDL window to use
  * @src_depth: Number of bits per pixel in the source frame buffer (that we read
  * from and render to SDL)
+ * @last_sync: Timestamp of last display update in milliseconds
  */
 static struct sdl_info {
 	int width;
@@ -67,6 +68,7 @@ static struct sdl_info {
 	SDL_Renderer *renderer;
 	SDL_Window *screen;
 	int src_depth;
+	int last_sync;
 } sdl;
 
 static void sandbox_sdl_poll_events(void)
@@ -148,6 +150,7 @@ int sandbox_sdl_init_display(int width, int height, int log2_bpp,
 		sdl.vis_width = sdl.width;
 		sdl.vis_height = sdl.height;
 	}
+	sdl.last_sync = 0;
 
 	if (!SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1"))
 		printf("Unable to init hinting: %s", SDL_GetError());
@@ -245,6 +248,10 @@ int sandbox_sdl_sync(void *lcd_base)
 
 	if (!sdl.texture)
 		return 0;
+
+	if (SDL_GetTicks() - sdl.last_sync < 100)
+		return -EAGAIN;
+
 	SDL_RenderClear(sdl.renderer);
 	ret = copy_to_texture(lcd_base);
 	if (ret) {
@@ -268,6 +275,8 @@ int sandbox_sdl_sync(void *lcd_base)
 	SDL_RenderDrawRect(sdl.renderer, &rect);
 
 	SDL_RenderPresent(sdl.renderer);
+	sdl.last_sync = SDL_GetTicks();
+
 	sandbox_sdl_poll_events();
 
 	return 0;

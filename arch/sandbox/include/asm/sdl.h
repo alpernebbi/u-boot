@@ -37,10 +37,12 @@ int sandbox_sdl_remove_display(void);
  * sandbox_sdl_sync() - Sync current U-Boot LCD frame buffer to SDL
  *
  * This must be called periodically to update the screen for SDL so that the
- * user can see it.
+ * user can see it. It is internally rate limited to 10 Hz to avoid using
+ * system resources too much.
  *
  * @lcd_base: Base of frame buffer
  * Return: 0 if screen was updated, -ENODEV is there is no screen.
+ *	   -EAGAIN if screen was not updated due to sync rate limit.
  */
 int sandbox_sdl_sync(void *lcd_base);
 
