@@ -452,9 +452,13 @@ int video_sync(struct udevice *vid, bool force)
 
 #if defined(CONFIG_VIDEO_SANDBOX_SDL)
 	static ulong last_sync;
+	void *fb = priv->fb;
+
+	if (IS_ENABLED(CONFIG_VIDEO_COPY))
+		fb = priv->copy_fb;
 
 	if (force || get_timer(last_sync) > 100) {
-		sandbox_sdl_sync(priv->fb);
+		sandbox_sdl_sync(fb);
 		last_sync = get_timer(0);
 	}
 #endif
