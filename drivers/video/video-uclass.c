@@ -446,6 +446,8 @@ int video_sync(struct udevice *vid, bool force)
 
 	if (ops && ops->video_sync) {
 		ret = ops->video_sync(vid);
+		while (force && ret == -EAGAIN)
+			ret = ops->video_sync(vid);
 		if (ret)
 			return ret;
 	}

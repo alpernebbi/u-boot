@@ -137,7 +137,8 @@ struct video_priv {
  *		displays needs synchronization when data in an FB is available.
  *		For these devices implement video_sync hook to call a sync
  *		function. vid is pointer to video device udevice. Function
- *		should return 0 on success video_sync and error code otherwise
+ *		should return 0 on success video_sync, -EAGAIN if it was
+ *		deferred and should be tried again, and error code otherwise
  */
 struct video_ops {
 	int (*video_sync)(struct udevice *vid);
