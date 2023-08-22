@@ -6,6 +6,7 @@
 #define LOG_CATEGORY UCLASS_VIDEO
 
 #include <common.h>
+#include <cyclic.h>
 #include <bloblist.h>
 #include <console.h>
 #include <cpu_func.h>
@@ -249,7 +250,7 @@ int video_fill(struct udevice *dev, u32 colour)
 	if (ret)
 		return ret;
 
-	return video_sync(dev, false);
+	return 0;
 }
 
 int video_clear(struct udevice *dev)
@@ -349,6 +350,22 @@ void video_set_default_colors(struct udevice *dev, bool invert)
 	priv->bg_col_idx = back;
 	priv->colour_fg = video_index_to_colour(priv, fore);
 	priv->colour_bg = video_index_to_colour(priv, back);
+}
+
+static void video_cyclic(void *ctx)
+{
+	struct udevice *dev = ctx;
+	int ret;
+
+	if (!device_active(dev))
+		return;
+
+	ret = video_sync(dev, true);
+	if (ret) {
+#ifdef DEBUG
+		console_puts_select_stderr(true, "[vc err: video_sync]");
+#endif
+	}
 }
 
 /* Flush video activity to the caches */
@@ -601,6 +618,13 @@ static int video_post_probe(struct udevice *dev)
 			log_debug("Cannot show splash screen\n");
 			return ret;
 		}
+	}
+
+	/* Register video sync as a cyclic function at 60Hz */
+	priv->cyclic = cyclic_register(video_cyclic, 16666, dev->name, dev);
+	if (!priv->cyclic) {
+		log_err("cyclic_register for %s video sync failed\n", dev->name);
+		return -ENODEV;
 	}
 
 	return 0;

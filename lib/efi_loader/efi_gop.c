@@ -451,8 +451,6 @@ static efi_status_t EFIAPI gop_blt(struct efi_gop *this,
 	if (ret != EFI_SUCCESS)
 		return EFI_EXIT(ret);
 
-	video_sync_all();
-
 	return EFI_EXIT(EFI_SUCCESS);
 }
 

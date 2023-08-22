@@ -77,7 +77,7 @@ static int vidconsole_back(struct udevice *dev)
 		if (priv->ycur < 0)
 			priv->ycur = 0;
 	}
-	return video_sync(dev->parent, false);
+	return 0;
 }
 
 /* Move to a newline, scrolling the display if necessary */
@@ -87,7 +87,7 @@ static void vidconsole_newline(struct udevice *dev)
 	struct udevice *vid_dev = dev->parent;
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid_dev);
 	const int rows = CONFIG_VAL(CONSOLE_SCROLL_LINES);
-	int i, ret;
+	int i;
 
 	priv->xcur_frac = priv->xstart_frac;
 	priv->ycur += priv->y_charsize;
@@ -101,13 +101,6 @@ static void vidconsole_newline(struct udevice *dev)
 		priv->ycur -= rows * priv->y_charsize;
 	}
 	priv->last_ch = 0;
-
-	ret = video_sync(dev->parent, false);
-	if (ret) {
-#ifdef DEBUG
-		console_puts_select_stderr(true, "[vc err: video_sync]");
-#endif
-	}
 }
 
 static char *parsenum(char *s, int *num)
@@ -298,15 +291,7 @@ static void vidconsole_escape_char(struct udevice *dev, char ch)
 		parsenum(priv->escape_buf + 1, &mode);
 
 		if (mode == 2) {
-			int ret;
-
 			video_clear(dev->parent);
-			ret = video_sync(dev->parent, false);
-			if (ret) {
-#ifdef DEBUG
-				console_puts_select_stderr(true, "[vc err: video_sync]");
-#endif
-			}
 			priv->ycur = 0;
 			priv->xcur_frac = priv->xstart_frac;
 		} else {
@@ -526,12 +511,6 @@ static void vidconsole_putc(struct stdio_dev *sdev, const char ch)
 		console_puts_select_stderr(true, "[vc err: putc]");
 #endif
 	}
-	ret = video_sync(dev->parent, false);
-	if (ret) {
-#ifdef DEBUG
-		console_puts_select_stderr(true, "[vc err: video_sync]");
-#endif
-	}
 }
 
 static void vidconsole_puts(struct stdio_dev *sdev, const char *s)
@@ -546,12 +525,6 @@ static void vidconsole_puts(struct stdio_dev *sdev, const char *s)
 
 		snprintf(str, sizeof(str), "[vc err: puts %d]", ret);
 		console_puts_select_stderr(true, str);
-#endif
-	}
-	ret = video_sync(dev->parent, false);
-	if (ret) {
-#ifdef DEBUG
-		console_puts_select_stderr(true, "[vc err: video_sync]");
 #endif
 	}
 }

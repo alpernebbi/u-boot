@@ -208,8 +208,6 @@ int expo_render(struct expo *exp)
 			return log_msg_ret("ren", ret);
 	}
 
-	video_sync(dev, true);
-
 	return scn ? 0 : -ECHILD;
 }
 
