@@ -13,6 +13,10 @@ config QEMU
 	imply USB
 	imply USB_EHCI_HCD
 	imply VIDEO_VESA
+	imply VIDEO_RAMFB
+	imply BOARD_EARLY_INIT_F
+	imply BOARD_EARLY_INIT_R
+	imply CMD_QFW
 
 if QEMU
 
