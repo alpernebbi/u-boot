@@ -464,10 +464,16 @@ int rk_vop_probe(struct udevice *dev)
 		return -EINVAL;
 	}
 
+	if (IS_ENABLED(CONFIG_VIDEO_COPY))
+		plat->copy_base = plat->base + plat->size / 2;
+
 	for (node = ofnode_first_subnode(port);
 	     ofnode_valid(node);
 	     node = dev_read_next_subnode(node)) {
-		ret = rk_display_init(dev, plat->base, node);
+		if (IS_ENABLED(CONFIG_VIDEO_COPY))
+			ret = rk_display_init(dev, plat->copy_base, node);
+		else
+			ret = rk_display_init(dev, plat->base, node);
 		if (ret)
 			debug("Device failed: ret=%d\n", ret);
 		if (!ret)
@@ -484,6 +490,9 @@ int rk_vop_bind(struct udevice *dev)
 
 	plat->size = 4 * (CONFIG_VIDEO_ROCKCHIP_MAX_XRES *
 			  CONFIG_VIDEO_ROCKCHIP_MAX_YRES);
+
+	if (IS_ENABLED(CONFIG_VIDEO_COPY))
+		plat->size *= 2;
 
 	return 0;
 }

@@ -418,7 +418,8 @@ static void video_flush_dcache(struct udevice *vid)
 		int y;
 
 		for (y = priv->damage.ystart; y < priv->damage.yend; y++) {
-			ulong fb = (ulong)priv->fb;
+			ulong fb = IS_ENABLED(CONFIG_VIDEO_COPY) ?
+				   (ulong)priv->copy_fb : (ulong)priv->fb;
 			ulong start = fb + (y * priv->line_length) + lstart;
 			ulong end = start + lend - lstart;
 
@@ -457,6 +458,10 @@ int video_sync(struct udevice *vid, bool force)
 	struct video_priv *priv = dev_get_uclass_priv(vid);
 	struct video_ops *ops = video_get_ops(vid);
 	int ret;
+
+	if (IS_ENABLED(CONFIG_VIDEO_DAMAGE))
+		if (!priv->damage.xend && !priv->damage.yend)
+			return 0;
 
 	if (IS_ENABLED(CONFIG_VIDEO_COPY))
 		video_flush_copy(vid);
