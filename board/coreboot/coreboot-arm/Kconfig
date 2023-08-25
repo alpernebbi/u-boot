@@ -13,6 +13,10 @@ config BOARD_SPECIFIC_OPTIONS # dummy
 	imply VIRTIO_BLK
 endif
 
+config PRE_CON_BUF_ADDR
+	hex
+	default 0x40100000
+
 if TARGET_QEMU_ARM_64BIT && !TFABOOT
 
 config BOARD_SPECIFIC_OPTIONS
