@@ -1058,8 +1058,6 @@ config ARCH_QEMU
 	imply USB_KEYBOARD
 	imply CMD_USB
 	imply VIDEO_RAMFB
-	imply BOARD_EARLY_INIT_F
-	imply BOARD_EARLY_INIT_R
 
 config ARCH_RENESAS
 	bool "Renesas ARM SoCs"
