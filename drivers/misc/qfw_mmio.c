@@ -116,5 +116,4 @@ U_BOOT_DRIVER(qfw_mmio) = {
 	.of_to_plat	= qfw_mmio_of_to_plat,
 	.probe	= qfw_mmio_probe,
 	.ops	= &qfw_mmio_ops,
-	.flags = DM_FLAG_PRE_RELOC,
 };
