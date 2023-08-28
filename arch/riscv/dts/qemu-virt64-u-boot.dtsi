@@ -6,4 +6,12 @@
 #include "binman.dtsi"
 
 / {
+	fw-cfg@10100000 {
+		bootph-some-ram;
+
+		qfw-ramfb {
+			compatible = "qemu,qfw-ramfb";
+			bootph-some-ram;
+		};
+	};
 };

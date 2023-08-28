@@ -51,6 +51,10 @@ static int ramfb_probe(struct udevice *dev)
 	if (!ops)
 		return -EPROBE_DEFER;
 
+	ret = qfw_read_firmware_list(qfw);
+	if (ret)
+		return -ENOENT;
+
 	file = qfw_find_file(qfw, "etc/ramfb");
 	if (!file) {
 		/* No ramfb available. At least we tried. */
@@ -89,9 +93,15 @@ static int ramfb_bind(struct udevice *dev)
 	return 0;
 }
 
+static const struct udevice_id ramfb_ids[] = {
+	{ .compatible = "qemu,qfw-ramfb" },
+	{ }
+};
+
 U_BOOT_DRIVER(ramfb) = {
 	.name	= "ramfb",
 	.id	= UCLASS_VIDEO,
+	.of_match	= ramfb_ids,
 	.probe	= ramfb_probe,
 	.bind   = ramfb_bind,
 };
