@@ -1,0 +1,6 @@
+/ {
+	fw-cfg {
+		compatible = "qemu,fw-cfg-pio";
+		bootph-some-ram;
+	};
+};

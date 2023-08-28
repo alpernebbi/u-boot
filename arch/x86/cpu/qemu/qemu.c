@@ -17,12 +17,6 @@
 
 static bool i440fx;
 
-#if CONFIG_IS_ENABLED(QFW_PIO)
-U_BOOT_DRVINFO(x86_qfw_pio) = {
-	.name = "qfw_pio",
-};
-#endif
-
 static void enable_pm_piix(void)
 {
 	u8 en;

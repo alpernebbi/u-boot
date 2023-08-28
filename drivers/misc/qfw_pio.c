@@ -61,9 +61,15 @@ static struct dm_qfw_ops qfw_pio_ops = {
 	.read_entry_dma = qfw_pio_read_entry_dma,
 };
 
+static const struct udevice_id qfw_pio_ids[] = {
+	{ .compatible = "qemu,fw-cfg-pio" },
+	{}
+};
+
 U_BOOT_DRIVER(qfw_pio) = {
 	.name	= "qfw_pio",
 	.id	= UCLASS_QFW,
+	.of_match	= qfw_pio_ids,
 	.probe	= qfw_pio_probe,
 	.ops	= &qfw_pio_ops,
 };
