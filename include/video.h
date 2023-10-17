@@ -8,6 +8,7 @@
 #define _VIDEO_H_
 
 #include <stdio_dev.h>
+#include <cyclic.h>
 
 struct udevice;
 
@@ -121,6 +122,7 @@ struct video_priv {
 	bool flush_dcache;
 	u8 fg_col_idx;
 	u8 bg_col_idx;
+	struct cyclic_info *cyclic;
 };
 
 /**

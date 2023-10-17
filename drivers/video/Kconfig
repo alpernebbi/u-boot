@@ -81,6 +81,23 @@ config VIDEO_PCI_DEFAULT_FB_SIZE
 	  maximum resolution. For example, at 2560 x 1600 with 32 bits per
 	  pixel, 2560 * 1600 * 32 / 8 = 0xfa0000 bytes are needed.
 
+config VIDEO_SYNC_CYCLIC
+	bool "Handle video hardware sync with a cyclic function"
+	depends on CYCLIC
+	help
+	  Delegate synchronizing the framebuffer with the display hardware to
+	  the cyclic subsystem, instead of attempting to sync whenever the
+	  framebuffer is modified as triggered by calls from modifiers.
+
+config VIDEO_SYNC_PERIOD_US
+	int "Video hardware sync period to target"
+	depends on VIDEO_SYNC_CYCLIC
+	default 16666
+	help
+	  Period of time between cyclic video hardware synchronization calls,
+	  in microseconds. Defaults to 16666us intended to match a 60Hz display
+	  refresh rate.
+
 config VIDEO_COPY
 	bool "Enable copying the frame buffer to a hardware copy"
 	help

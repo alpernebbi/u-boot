@@ -5,6 +5,7 @@
 
 #define LOG_CATEGORY UCLASS_VIDEO
 
+#include <cyclic.h>
 #include <bloblist.h>
 #include <console.h>
 #include <cpu_func.h>
@@ -350,7 +351,12 @@ void video_set_default_colors(struct udevice *dev, bool invert)
 int video_sync(struct udevice *vid, bool force)
 {
 	struct video_ops *ops = video_get_ops(vid);
+	struct video_priv *priv = dev_get_uclass_priv(vid);
 	int ret;
+
+	/* If we have cyclic, it will call sync later with force */
+	if (IS_ENABLED(CONFIG_VIDEO_SYNC_CYCLIC) && priv->cyclic && !force)
+		return 0;
 
 	if (ops && ops->video_sync) {
 		ret = ops->video_sync(vid);
@@ -364,8 +370,6 @@ int video_sync(struct udevice *vid, bool force)
 	 * out whether it exists? For now, ARM is safe.
 	 */
 #if defined(CONFIG_ARM) && !CONFIG_IS_ENABLED(SYS_DCACHE_OFF)
-	struct video_priv *priv = dev_get_uclass_priv(vid);
-
 	if (priv->flush_dcache) {
 		flush_dcache_range((ulong)priv->fb,
 				   ALIGN((ulong)priv->fb + priv->fb_size,
@@ -397,6 +401,20 @@ void video_sync_all(void)
 				dev_dbg(dev, "Video sync failed\n");
 		}
 	}
+}
+
+static void video_sync_cyclic(void *ctx)
+{
+	struct udevice *dev = ctx;
+	struct video_priv *priv = dev_get_uclass_priv(dev);
+	int ret;
+
+	if (!device_active(dev))
+		return;
+
+	ret = video_sync(dev, true);
+	if (ret)
+		dev_dbg(dev, "Cyclic video sync failed\n");
 }
 
 bool video_is_active(void)
@@ -619,6 +637,18 @@ static int video_post_probe(struct udevice *dev)
 		if (ret) {
 			log_debug("Cannot show splash screen\n");
 			return ret;
+		}
+	}
+
+	/* Register video sync as a cyclic function */
+	if (IS_ENABLED(CONFIG_VIDEO_SYNC_CYCLIC)) {
+		uint64_t delay_us = IF_ENABLED_INT(CONFIG_VIDEO_SYNC_CYCLIC,
+						   CONFIG_VIDEO_SYNC_PERIOD_US);
+		priv->cyclic = cyclic_register(video_sync_cyclic, delay_us,
+					       dev->name, dev);
+		if (!priv->cyclic) {
+			log_err("cyclic_register for %s video sync failed\n", dev->name);
+			return -ENODEV;
 		}
 	}
 
