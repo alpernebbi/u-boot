@@ -4,6 +4,7 @@
  */
 
 #include <cpu_func.h>
+#include <cb_sysinfo.h>
 #include <dm.h>
 #include <efi.h>
 #include <efi_loader.h>
@@ -68,6 +69,19 @@ static struct mm_region qemu_arm64_mem_map[] = {
 struct mm_region *mem_map = qemu_arm64_mem_map;
 #endif
 
+int arch_cpu_init(void)
+{
+	int ret = 0;
+
+        ret = get_coreboot_info(&lib_sysinfo);
+        if (ret != 0) {
+                printf("Failed to parse coreboot tables.\n");
+                return ret;
+        }
+
+	return 0;
+}
+
 int board_init(void)
 {
 	return 0;
@@ -93,6 +107,19 @@ int dram_init(void)
 	if (fdtdec_setup_mem_size_base() != 0)
 		return -EINVAL;
 
+        const struct sysinfo_t *sysinfo = cb_get_sysinfo();
+        if (!sysinfo) {
+                printf("Failed to get sysinfo struct.\n");
+                return 0;
+        }
+
+        for (int i = 0; i < sysinfo->n_memranges; i++) {
+                const struct memrange *range = &sysinfo->memrange[i];
+                printf("memrange[%d]->base = %#llx\n", i, range->base);
+                printf("memrange[%d]->size = %#llx\n", i, range->size);
+                printf("memrange[%d]->type = %#x\n",   i, range->type);
+        }
+
 	return 0;
 }
 
@@ -114,4 +141,27 @@ void enable_caches(void)
 {
 	 icache_enable();
 	 dcache_enable();
+}
+
+long detect_coreboot_table_at(ulong start, ulong size)
+{
+        u32 *ptr, *end;
+
+        size /= 4;
+        for (ptr = (void *)start, end = ptr + size; ptr < end; ptr += 4) {
+                if (*ptr == 0x4f49424c) /* "LBIO" */
+                        return (long)ptr;
+        }
+
+        return -ENOENT;
+}
+
+long locate_coreboot_table(void)
+{
+        long addr;
+
+        /* TODO: get from device-tree */
+        addr = detect_coreboot_table_at(0xbffdc000, 0xc00); /* -m 2G */
+
+        return addr;
 }
