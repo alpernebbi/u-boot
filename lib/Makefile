@@ -21,6 +21,8 @@ obj-$(CONFIG_OPTEE_LIB) += optee/
 obj-$(CONFIG_AES) += aes.o
 obj-$(CONFIG_AES) += aes/
 obj-$(CONFIG_$(PHASE_)BINMAN_FDT) += binman.o
+obj-y	+= coreboot/
+obj-$(CONFIG_SEABIOS) += coreboot_table.o
 
 ifndef API_BUILD
 ifneq ($(CONFIG_CHARSET),)

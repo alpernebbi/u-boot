@@ -19,6 +19,7 @@ struct arch_global_data {
 #if defined(CONFIG_FSL_ESDHC) || defined(CONFIG_FSL_ESDHC_IMX)
 	u32 sdhc_clk;
 #endif
+	ulong coreboot_table;		/* Addres of coreboot table */
 #if CONFIG_IS_ENABLED(ACPI)
 	ulong table_start;		/* Start address of ACPI tables */
 	ulong table_end;		/* End address of ACPI tables */
