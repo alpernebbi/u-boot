@@ -36,6 +36,18 @@ int arch_cpu_init(void)
 		return ret;
 	}
 
+	debug("sysinfo version:         %s\n", lib_sysinfo.version);
+	debug("sysinfo extra_version:   %s\n", lib_sysinfo.extra_version);
+	debug("sysinfo build:           %s\n", lib_sysinfo.build);
+	debug("sysinfo compile_time:    %s\n", lib_sysinfo.compile_time);
+	debug("sysinfo compile_by:      %s\n", lib_sysinfo.compile_by);
+	debug("sysinfo compile_host:    %s\n", lib_sysinfo.compile_host);
+	debug("sysinfo compile_domain:  %s\n", lib_sysinfo.compile_domain);
+	debug("sysinfo compiler:        %s\n", lib_sysinfo.compiler);
+	debug("sysinfo linker:          %s\n", lib_sysinfo.linker);
+	debug("sysinfo assembler:       %s\n", lib_sysinfo.assembler);
+	debug("sysinfo cb_version:      %s\n", lib_sysinfo.cb_version);
+
 	return 0;
 }
 
