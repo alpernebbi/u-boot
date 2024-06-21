@@ -137,12 +137,6 @@ void *board_fdt_blob_setup(int *err)
 	return (void *)CFG_SYS_SDRAM_BASE;
 }
 
-void enable_caches(void)
-{
-	icache_enable();
-	dcache_enable();
-}
-
 long detect_coreboot_table_at(ulong start, ulong size)
 {
 	u32 *ptr, *end;
