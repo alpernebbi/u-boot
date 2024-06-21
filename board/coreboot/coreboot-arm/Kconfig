@@ -5,12 +5,6 @@ config TEXT_BASE
 
 config BOARD_SPECIFIC_OPTIONS # dummy
 	def_bool y
-	select CMD_QFW
-	select QFW_MMIO
-	imply VIRTIO_MMIO
-	imply VIRTIO_PCI
-	imply VIRTIO_NET
-	imply VIRTIO_BLK
 endif
 
 config PRE_CON_BUF_ADDR
