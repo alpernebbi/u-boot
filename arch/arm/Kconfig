@@ -1039,7 +1039,6 @@ config ARCH_COREBOOT
 	select DM_SERIAL
 	select OF_CONTROL
 	select POSITION_INDEPENDENT
-	select PL01X_SERIAL
 	imply CMD_DM
 	imply DM_RNG
 	imply DM_RTC
