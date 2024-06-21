@@ -345,7 +345,6 @@ endif
 
 config VIDEO_COREBOOT
 	bool "Enable coreboot framebuffer driver support"
-	depends on X86
 	help
 	  Turn on this option to enable a framebuffer driver when U-Boot is
 	  loaded by coreboot where the graphics device is configured by
