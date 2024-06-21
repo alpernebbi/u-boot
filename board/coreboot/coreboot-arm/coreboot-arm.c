@@ -21,52 +21,9 @@
 #ifdef CONFIG_ARM64
 #include <asm/armv8/mmu.h>
 
-static struct mm_region qemu_arm64_mem_map[] = {
-	{
-		/* Flash */
-		.virt = 0x00000000UL,
-		.phys = 0x00000000UL,
-		.size = 0x08000000UL,
-		.attrs = PTE_BLOCK_MEMTYPE(MT_NORMAL) |
-			 PTE_BLOCK_INNER_SHARE
-	}, {
-		/* Lowmem peripherals */
-		.virt = 0x08000000UL,
-		.phys = 0x08000000UL,
-		.size = 0x38000000,
-		.attrs = PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
-			 PTE_BLOCK_NON_SHARE |
-			 PTE_BLOCK_PXN | PTE_BLOCK_UXN
-	}, {
-		/* RAM */
-		.virt = 0x40000000UL,
-		.phys = 0x40000000UL,
-		.size = 255UL * SZ_1G,
-		.attrs = PTE_BLOCK_MEMTYPE(MT_NORMAL) |
-			 PTE_BLOCK_INNER_SHARE
-	}, {
-		/* Highmem PCI-E ECAM memory area */
-		.virt = 0x4010000000ULL,
-		.phys = 0x4010000000ULL,
-		.size = 0x10000000,
-		.attrs = PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
-			 PTE_BLOCK_NON_SHARE |
-			 PTE_BLOCK_PXN | PTE_BLOCK_UXN
-	}, {
-		/* Highmem PCI-E MMIO memory area */
-		.virt = 0x8000000000ULL,
-		.phys = 0x8000000000ULL,
-		.size = 0x8000000000ULL,
-		.attrs = PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
-			 PTE_BLOCK_NON_SHARE |
-			 PTE_BLOCK_PXN | PTE_BLOCK_UXN
-	}, {
-		/* List terminator */
-		0,
-	}
-};
-
-struct mm_region *mem_map = qemu_arm64_mem_map;
+#define MAX_MEM_MAP_REGIONS 16
+static struct mm_region coreboot_mem_map[MAX_MEM_MAP_REGIONS] __section(".data") = {0};
+struct mm_region *mem_map = coreboot_mem_map;
 #endif
 
 int arch_cpu_init(void)
@@ -113,11 +70,34 @@ int dram_init(void)
 		return 0;
 	}
 
+	const struct memrange *range;
 	for (int i = 0; i < sysinfo->n_memranges; i++) {
-		const struct memrange *range = &sysinfo->memrange[i];
+		range = &sysinfo->memrange[i];
 		printf("memrange[%d]->base = %#llx\n", i, range->base);
 		printf("memrange[%d]->size = %#llx\n", i, range->size);
 		printf("memrange[%d]->type = %#x\n",   i, range->type);
+	}
+
+	struct mm_region *region;
+	int i = 0;
+	for (i = 0; i < sysinfo->n_memranges; i++) {
+		range = &sysinfo->memrange[i];
+		region = &coreboot_mem_map[i];
+
+		region->virt = range->base;
+		region->phys = range->base;
+		region->size = range->size;
+
+		switch (range->type) {
+		case CB_MEM_RAM:
+			region->attrs = PTE_BLOCK_MEMTYPE(MT_NORMAL) |
+					PTE_BLOCK_INNER_SHARE;
+			break;
+		default:
+			region->attrs = PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
+					PTE_BLOCK_NON_SHARE |
+					PTE_BLOCK_PXN | PTE_BLOCK_UXN;
+		}
 	}
 
 	return 0;
