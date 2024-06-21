@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0+
 
-obj-$(CONFIG_CMD_CBSYSINFO) += cbsysinfo.o
 obj-y += cpuid.o msr.o mtrr.o
 obj-$(CONFIG_CMD_CBCMOS) += cbcmos.o
 obj-$(CONFIG_CMD_EXCEPTION) += exception.o

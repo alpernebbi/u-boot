@@ -2885,7 +2885,6 @@ menu "Debug commands"
 
 config CMD_CBSYSINFO
 	bool "cbsysinfo"
-	depends on X86
 	default y if SYS_COREBOOT
 	help
 	  This provides information about the coreboot sysinfo table stored in

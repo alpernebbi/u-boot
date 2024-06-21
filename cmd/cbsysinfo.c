@@ -4,7 +4,7 @@
  * Written by Simon Glass <sjg@chromium.org>
  */
 
-#include <asm/cb_sysinfo.h>
+#include <cb_sysinfo.h>
 #include <command.h>
 #include <console.h>
 #include <asm/global_data.h>
@@ -369,7 +369,9 @@ static void show_table(struct sysinfo_t *info, bool verbose)
 
 	print_addr64("SMBIOS", info->smbios_start);
 	print_hex(">size", info->smbios_size);
+#if CONFIG_X86
 	print_hex("ROM MTRR", info->x86_rom_var_mtrr_index);
+#endif
 
 	print_ptr("Tstamp table", info->tstamp_table);
 	if (verbose && info->tstamp_table) {
