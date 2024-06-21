@@ -175,7 +175,9 @@ long locate_coreboot_table(void)
 
 	/* TODO: get from device-tree */
 	for (int i = 10; i < 64; i++) {
-		addr = detect_coreboot_table_at(0x8000000 * i - 0x24000, 0xc00);
+		addr = 0x8000000 * i - 0x24000;
+		debug("Trying coreboot table at %#lx.\n", addr);
+		addr = detect_coreboot_table_at(addr, 0xc00);
 		if (addr > 0) {
 			debug("Found coreboot table at %#lx.\n", addr);
 			break;
