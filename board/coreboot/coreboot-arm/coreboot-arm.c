@@ -100,6 +100,16 @@ int dram_init(void)
 		}
 	}
 
+	for (int i = 0; i < MAX_MEM_MAP_REGIONS; i++) {
+		region = &mem_map[i];
+		if (!region->virt && !region->attrs)
+			break;
+		debug("mem_map[%d]->virt  = %#llx\n", i, region->virt);
+		debug("mem_map[%d]->phys  = %#llx\n", i, region->phys);
+		debug("mem_map[%d]->size  = %#llx\n", i, region->size);
+		debug("mem_map[%d]->attrs = %#llx\n", i, region->attrs);
+	}
+
 	return 0;
 }
 
