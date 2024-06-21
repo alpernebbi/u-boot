@@ -158,10 +158,16 @@ long detect_coreboot_table_at(ulong start, ulong size)
 
 long locate_coreboot_table(void)
 {
-	long addr;
+	long addr = 0;
 
 	/* TODO: get from device-tree */
-       addr = detect_coreboot_table_at(0xbffdc000, 0xc00); /* -m 2G */
+	for (int i = 10; i < 64; i++) {
+		addr = detect_coreboot_table_at(0x8000000 * i - 0x24000, 0xc00);
+		if (addr > 0) {
+			printf("Found coreboot table at %#lx.\n", addr);
+			break;
+		}
+	}
 
 	return addr;
 }
