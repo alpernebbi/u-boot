@@ -73,11 +73,11 @@ int arch_cpu_init(void)
 {
 	int ret = 0;
 
-        ret = get_coreboot_info(&lib_sysinfo);
-        if (ret != 0) {
-                printf("Failed to parse coreboot tables.\n");
-                return ret;
-        }
+	ret = get_coreboot_info(&lib_sysinfo);
+	if (ret != 0) {
+		printf("Failed to parse coreboot tables.\n");
+		return ret;
+	}
 
 	return 0;
 }
@@ -97,7 +97,7 @@ int board_late_init(void)
 
 	/* start usb so that usb keyboard can be used as input device */
 	if (CONFIG_IS_ENABLED(USB_KEYBOARD))
-	       usb_init();
+		usb_init();
 
 	return 0;
 }
@@ -139,29 +139,29 @@ void *board_fdt_blob_setup(int *err)
 
 void enable_caches(void)
 {
-	 icache_enable();
-	 dcache_enable();
+	icache_enable();
+	dcache_enable();
 }
 
 long detect_coreboot_table_at(ulong start, ulong size)
 {
-        u32 *ptr, *end;
+	u32 *ptr, *end;
 
-        size /= 4;
-        for (ptr = (void *)start, end = ptr + size; ptr < end; ptr += 4) {
-                if (*ptr == 0x4f49424c) /* "LBIO" */
-                        return (long)ptr;
-        }
+	size /= 4;
+	for (ptr = (void *)start, end = ptr + size; ptr < end; ptr += 4) {
+		if (*ptr == 0x4f49424c) /* "LBIO" */
+			return (long)ptr;
+	}
 
-        return -ENOENT;
+	return -ENOENT;
 }
 
 long locate_coreboot_table(void)
 {
-        long addr;
+	long addr;
 
-        /* TODO: get from device-tree */
-        addr = detect_coreboot_table_at(0xbffdc000, 0xc00); /* -m 2G */
+	/* TODO: get from device-tree */
+       addr = detect_coreboot_table_at(0xbffdc000, 0xc00); /* -m 2G */
 
-        return addr;
+	return addr;
 }
