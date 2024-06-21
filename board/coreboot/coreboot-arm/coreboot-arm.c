@@ -32,7 +32,7 @@ int arch_cpu_init(void)
 
 	ret = get_coreboot_info(&lib_sysinfo);
 	if (ret != 0) {
-		printf("Failed to parse coreboot tables.\n");
+		log_err("Failed to parse coreboot tables.\n");
 		return ret;
 	}
 
@@ -66,16 +66,16 @@ int dram_init(void)
 
 	const struct sysinfo_t *sysinfo = cb_get_sysinfo();
 	if (!sysinfo) {
-		printf("Failed to get sysinfo struct.\n");
+		log_err("Failed to get sysinfo struct.\n");
 		return 0;
 	}
 
 	const struct memrange *range;
 	for (int i = 0; i < sysinfo->n_memranges; i++) {
 		range = &sysinfo->memrange[i];
-		printf("memrange[%d]->base = %#llx\n", i, range->base);
-		printf("memrange[%d]->size = %#llx\n", i, range->size);
-		printf("memrange[%d]->type = %#x\n",   i, range->type);
+		debug("memrange[%d]->base = %#llx\n", i, range->base);
+		debug("memrange[%d]->size = %#llx\n", i, range->size);
+		debug("memrange[%d]->type = %#x\n",   i, range->type);
 	}
 
 	struct mm_region *region;
@@ -138,7 +138,7 @@ long locate_coreboot_table(void)
 	for (int i = 10; i < 64; i++) {
 		addr = detect_coreboot_table_at(0x8000000 * i - 0x24000, 0xc00);
 		if (addr > 0) {
-			printf("Found coreboot table at %#lx.\n", addr);
+			debug("Found coreboot table at %#lx.\n", addr);
 			break;
 		}
 	}
