@@ -48,6 +48,23 @@ int arch_cpu_init(void)
 	debug("sysinfo assembler:       %s\n", lib_sysinfo.assembler);
 	debug("sysinfo cb_version:      %s\n", lib_sysinfo.cb_version);
 
+	debug("sysinfo framebuffer:     %p\n", lib_sysinfo.framebuffer);
+	debug("sysinfo framebuffer.tag:                %x\n",  lib_sysinfo.framebuffer->tag);
+	debug("sysinfo framebuffer.size:               %x\n",  lib_sysinfo.framebuffer->size);
+	debug("sysinfo framebuffer.physical_address:   %llx\n", lib_sysinfo.framebuffer->physical_address);
+	debug("sysinfo framebuffer.x_resolution:       %d\n",  lib_sysinfo.framebuffer->x_resolution);
+	debug("sysinfo framebuffer.y_resolution:       %d\n",  lib_sysinfo.framebuffer->y_resolution);
+	debug("sysinfo framebuffer.bytes_per_line:     %x\n",  lib_sysinfo.framebuffer->bytes_per_line);
+	debug("sysinfo framebuffer.bits_per_pixel:     %d\n",  lib_sysinfo.framebuffer->bits_per_pixel);
+	debug("sysinfo framebuffer.red_mask_pos:       %x\n",  lib_sysinfo.framebuffer->red_mask_pos);
+	debug("sysinfo framebuffer.red_mask_size:      %x\n",  lib_sysinfo.framebuffer->red_mask_size);
+	debug("sysinfo framebuffer.green_mask_pos:     %x\n",  lib_sysinfo.framebuffer->green_mask_pos);
+	debug("sysinfo framebuffer.green_mask_size:    %x\n",  lib_sysinfo.framebuffer->green_mask_size);
+	debug("sysinfo framebuffer.blue_mask_pos:      %x\n",  lib_sysinfo.framebuffer->blue_mask_pos);
+	debug("sysinfo framebuffer.blue_mask_size:     %x\n",  lib_sysinfo.framebuffer->blue_mask_size);
+	debug("sysinfo framebuffer.reserved_mask_pos:  %x\n",  lib_sysinfo.framebuffer->reserved_mask_pos);
+	debug("sysinfo framebuffer.reserved_mask_size: %x\n",  lib_sysinfo.framebuffer->reserved_mask_size);
+
 	return 0;
 }
 
