@@ -107,18 +107,18 @@ int dram_init(void)
 	if (fdtdec_setup_mem_size_base() != 0)
 		return -EINVAL;
 
-        const struct sysinfo_t *sysinfo = cb_get_sysinfo();
-        if (!sysinfo) {
-                printf("Failed to get sysinfo struct.\n");
-                return 0;
-        }
+	const struct sysinfo_t *sysinfo = cb_get_sysinfo();
+	if (!sysinfo) {
+		printf("Failed to get sysinfo struct.\n");
+		return 0;
+	}
 
-        for (int i = 0; i < sysinfo->n_memranges; i++) {
-                const struct memrange *range = &sysinfo->memrange[i];
-                printf("memrange[%d]->base = %#llx\n", i, range->base);
-                printf("memrange[%d]->size = %#llx\n", i, range->size);
-                printf("memrange[%d]->type = %#x\n",   i, range->type);
-        }
+	for (int i = 0; i < sysinfo->n_memranges; i++) {
+		const struct memrange *range = &sysinfo->memrange[i];
+		printf("memrange[%d]->base = %#llx\n", i, range->base);
+		printf("memrange[%d]->size = %#llx\n", i, range->size);
+		printf("memrange[%d]->type = %#x\n",   i, range->type);
+	}
 
 	return 0;
 }
