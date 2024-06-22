@@ -248,8 +248,10 @@ void ns16550_init(struct ns16550 *com_port, int baud_divisor)
 	}
 #endif
 
+#if !defined(CONFIG_PL01X_SERIAL)
 	while (!(serial_in(&com_port->lsr) & UART_LSR_TEMT))
 		;
+#endif
 
 	serial_out(CFG_SYS_NS16550_IER, &com_port->ier);
 #if defined(CONFIG_ARCH_OMAP2PLUS) || defined(CONFIG_OMAP_SERIAL)
@@ -329,8 +331,10 @@ static inline void _debug_uart_init(void)
 	int baud_divisor;
 
 	/* Wait until tx buffer is empty */
+#if !defined(CONFIG_PL01X_SERIAL)
 	while (!(serial_din(&com_port->lsr) & UART_LSR_TEMT))
 		;
+#endif
 
 	/*
 	 * We copy the code from above because it is already horribly messy.
@@ -384,8 +388,10 @@ static int ns16550_serial_putc(struct udevice *dev, const char ch)
 {
 	struct ns16550 *const com_port = dev_get_priv(dev);
 
+#if !defined(CONFIG_PL01X_SERIAL)
 	if (!(serial_in(&com_port->lsr) & UART_LSR_THRE))
 		return -EAGAIN;
+#endif
 	serial_out(ch, &com_port->thr);
 
 	/*
