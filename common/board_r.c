@@ -9,6 +9,9 @@
  * Marius Groeger <mgroeger@sysgo.de>
  */
 
+#define LOG_DEBUG 1
+#define DEBUG 1
+
 #include <config.h>
 #include <api.h>
 #include <bootstage.h>

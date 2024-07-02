@@ -5,6 +5,9 @@
  * Copyright (C) 2008 Advanced Micro Devices, Inc.
  */
 
+#define LOG_DEBUG 1
+#define DEBUG 1
+
 #ifndef _COREBOOT_TABLES_H
 #define _COREBOOT_TABLES_H
 

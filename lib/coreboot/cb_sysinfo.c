@@ -6,12 +6,18 @@
  * Copyright (C) 2009 coresystems GmbH
  */
 
+#define LOG_DEBUG 1
+#define DEBUG 1
+
 #include <cb_sysinfo.h>
+#include <debug_uart.h>
 #include <init.h>
 #include <mapmem.h>
 #include <net.h>
 #include <asm/global_data.h>
+#include <asm/unaligned.h>
 #include <linux/errno.h>
+#include <linux/delay.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -129,23 +135,29 @@ static void cb_parse_mac_addresses(unsigned char *ptr,
 
 static void cb_parse_tstamp(void *ptr, struct sysinfo_t *info)
 {
+	printascii("cb_parse_tstamp()\n");
 	struct cb_cbmem_tab *const cbmem = ptr;
 
 	info->tstamp_table = map_sysmem(cbmem->cbmem_tab, 0);
+	printascii("cb_parse_tstamp() done\n");
 }
 
 static void cb_parse_cbmem_cons(void *ptr, struct sysinfo_t *info)
 {
+	printascii("cb_parse_cbmem_cons()\n");
 	struct cb_cbmem_tab *const cbmem = ptr;
 
 	info->cbmem_cons = map_sysmem(cbmem->cbmem_tab, 0);
+	printascii("cb_parse_cbmem_cons() done\n");
 }
 
 static void cb_parse_acpi_gnvs(unsigned char *ptr, struct sysinfo_t *info)
 {
+	printascii("cb_parse_acpi_gvns()\n");
 	struct cb_cbmem_tab *const cbmem = (struct cb_cbmem_tab *)ptr;
 
 	info->acpi_gnvs = map_sysmem(cbmem->cbmem_tab, 0);
+	printascii("cb_parse_acpi_gvns() done\n");
 }
 
 static void cb_parse_board_id(unsigned char *ptr, struct sysinfo_t *info)
@@ -190,9 +202,11 @@ static void cb_parse_string(unsigned char *ptr, char **info)
 
 static void cb_parse_wifi_calibration(void *ptr, struct sysinfo_t *info)
 {
+	printascii("cb_parse_wifi_calibration()\n");
 	struct cb_cbmem_tab *const cbmem = (struct cb_cbmem_tab *)ptr;
 
-	info->wifi_calibration = map_sysmem(cbmem->cbmem_tab, 0);
+	info->wifi_calibration = (void *)(uintptr_t)(cbmem->cbmem_tab);
+	printascii("cb_parse_wifi_calibration() done\n");
 }
 
 static void cb_parse_ramoops(void *ptr, struct sysinfo_t *info)
@@ -223,6 +237,7 @@ static void cb_parse_spi_flash(void *ptr, struct sysinfo_t *info)
 static void cb_parse_boot_media_params(unsigned char *ptr,
 				       struct sysinfo_t *info)
 {
+	printascii("cb_parse_boot_media_params()\n");
 	struct cb_boot_media_params *const bmp =
 			(struct cb_boot_media_params *)ptr;
 
@@ -230,13 +245,14 @@ static void cb_parse_boot_media_params(unsigned char *ptr,
 	info->cbfs_offset = bmp->cbfs_offset;
 	info->cbfs_size = bmp->cbfs_size;
 	info->boot_media_size = bmp->boot_media_size;
+	printascii("cb_parse_boot_media_params() done\n");
 }
 
 static void cb_parse_vpd(void *ptr, struct sysinfo_t *info)
 {
 	struct cb_cbmem_tab *const cbmem = (struct cb_cbmem_tab *)ptr;
 
-	info->chromeos_vpd = map_sysmem(cbmem->cbmem_tab, 0);
+	info->chromeos_vpd = (void *)(uintptr_t)(cbmem->cbmem_tab);
 }
 
 static void cb_parse_tsc_info(void *ptr, struct sysinfo_t *info)
@@ -263,18 +279,25 @@ static void cb_parse_mrc_cache(void *ptr, struct sysinfo_t *info)
 {
 	struct cb_cbmem_tab *const cbmem = (struct cb_cbmem_tab *)ptr;
 
-	info->mrc_cache = map_sysmem(cbmem->cbmem_tab, 0);
+	info->mrc_cache = (void *)(uintptr_t)(cbmem->cbmem_tab);
 }
 
 static void cb_parse_acpi_rsdp(void *ptr, struct sysinfo_t *info)
 {
 	struct cb_cbmem_tab *const cbmem = (struct cb_cbmem_tab *)ptr;
 
-	info->rsdp = map_sysmem(cbmem->cbmem_tab, 0);
+	info->rsdp = (void *)(uintptr_t)(cbmem->cbmem_tab);
 }
 
 __weak void cb_parse_unhandled(u32 tag, unsigned char *ptr)
 {
+	printascii("cb_parse_unhandled: tag = ");
+	printhex8(tag);
+	printascii("\n");
+
+	printascii("cb_parse_unhandled: ptr = ");
+	printhex8((uintptr_t)ptr);
+	printascii("\n");
 }
 
 static int cb_parse_header(void *addr, int len, struct sysinfo_t *info)
@@ -282,6 +305,7 @@ static int cb_parse_header(void *addr, int len, struct sysinfo_t *info)
 	unsigned char *ptr = addr;
 	struct cb_header *header;
 	int i;
+
 
 	header = (struct cb_header *)ptr;
 	if (!header->table_bytes)
@@ -393,9 +417,11 @@ static int cb_parse_header(void *addr, int len, struct sysinfo_t *info)
 			cb_parse_string(ptr, &info->serialno);
 			break;
 		case CB_TAG_TIMESTAMPS:
+			/* printascii("cb_parse_header:   skip CB_TAG_TIMESTAMPS\n"); */
 			cb_parse_tstamp(ptr, info);
 			break;
 		case CB_TAG_CBMEM_CONSOLE:
+			/* printascii("cb_parse_header:   skip CB_TAG_CBMEM_CONSOLE\n"); */
 			cb_parse_cbmem_cons(ptr, info);
 			break;
 		case CB_TAG_ACPI_GNVS:
@@ -423,6 +449,7 @@ static int cb_parse_header(void *addr, int len, struct sysinfo_t *info)
 			cb_parse_mtc(ptr, info);
 			break;
 		case CB_TAG_BOOT_MEDIA_PARAMS:
+			/* printascii("cb_parse_header:   skip CB_TAG_BOOT_MEDIA_PARAMS\n"); */
 			cb_parse_boot_media_params(ptr, info);
 			break;
 		case CB_TAG_TSC_INFO:
@@ -466,6 +493,11 @@ int get_coreboot_info(struct sysinfo_t *info)
 	addr = locate_coreboot_table();
 	if (addr < 0)
 		return addr;
+
+	printascii("get_coreboot_info: coreboot tables @ ");
+	printhex8(addr);
+	printascii("\n");
+
 	info->table_size = 0;
 	info->rec_count = 0;
 	ret = cb_parse_header((void *)addr, 0x1000, info);

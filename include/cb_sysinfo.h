@@ -5,6 +5,9 @@
  * Copyright (C) 2008 Advanced Micro Devices, Inc.
  */
 
+#define LOG_DEBUG 1
+#define DEBUG 1
+
 #ifndef _COREBOOT_SYSINFO_H
 #define _COREBOOT_SYSINFO_H
 
@@ -196,9 +199,7 @@ struct sysinfo_t {
 	u64 smbios_start;
 	u32 smbios_size;
 
-#ifdef CONFIG_X86
 	int x86_rom_var_mtrr_index;
-#endif
 
 	void		*tstamp_table;
 	void		*cbmem_cons;

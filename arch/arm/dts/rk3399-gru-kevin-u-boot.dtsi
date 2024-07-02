@@ -6,6 +6,21 @@
 #include "rk3399-gru-u-boot.dtsi"
 #include "rk3399-sdram-lpddr3-samsung-4GB-1866.dtsi"
 
+/ {
+        coreboot-fb {
+                bootph-some-ram;
+                compatible = "coreboot-fb";
+        };
+
+        coreboot-serial {
+                compatible = "coreboot-serial";
+        };
+
+        chosen {
+                stdout-path = "/coreboot-serial";
+        };
+};
+
 &ppvar_centerlogic_pwm {
 	regulator-init-microvolt = <925000>;
 };

@@ -6,6 +6,9 @@
  * Add it to the ofnode API instead, since that is compatible with livetree.
  */
 
+#define LOG_DEBUG 1
+#define DEBUG 1
+
 #ifndef USE_HOSTCC
 
 #define LOG_CATEGORY	LOGC_DT
