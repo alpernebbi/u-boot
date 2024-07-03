@@ -42,7 +42,7 @@
 /* 		0, */
 /* 	} */
 /* }; */
-static struct mm_region coreboot_mem_map[MAX_MEM_MAP_REGIONS] = {0};
+static struct mm_region coreboot_mem_map[MAX_MEM_MAP_REGIONS] __section(".data") = {0};
 struct mm_region *mem_map = coreboot_mem_map;
 #endif
 
@@ -230,25 +230,33 @@ int dram_init(void)
 
 	struct mm_region *region;
 	int i = 0;
+	int j = 0;
 	for (i = 0; i < sysinfo->n_memranges; i++) {
 		range = &sysinfo->memrange[i];
-		region = &coreboot_mem_map[i];
-
-		region->virt = range->base;
-		region->phys = range->base;
-		region->size = range->size;
+		region = &coreboot_mem_map[j];
+		u64 attrs = 0;
 
 		switch (range->type) {
 		case CB_MEM_RAM:
 		case CB_MEM_TABLE:
-			region->attrs = PTE_BLOCK_MEMTYPE(MT_NORMAL) |
+			attrs = PTE_BLOCK_MEMTYPE(MT_NORMAL) |
 					PTE_BLOCK_INNER_SHARE;
 			break;
-		default:
-			region->attrs = PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
+		case CB_MEM_MMIO:
+			attrs = PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
 					PTE_BLOCK_NON_SHARE |
 					PTE_BLOCK_PXN | PTE_BLOCK_UXN;
+			break;
+		default:
+			continue;
 		}
+
+		region->virt = range->base;
+		region->phys = range->base;
+		region->size = range->size;
+		region->attrs = attrs;
+		j++;
+
 	}
 
 	for (int i = 0; i < MAX_MEM_MAP_REGIONS; i++) {
@@ -298,16 +306,6 @@ int dram_init_banksize(void)
 	}
 
 	return 0;
-}
-
-void enable_caches(void)
-{
-	log_err("enable_caches().\n");
-	icache_enable();
-	log_err("icache_enable() done.\n");
-	/* fails */
-	dcache_enable();
-	log_err("dcache_enable() done.\n");
 }
 
 void *board_fdt_blob_setup(int *err)
