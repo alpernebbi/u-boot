@@ -69,10 +69,11 @@ int arch_cpu_init(void)
 	log_err("arch_cpu_init().\n");
 	int ret = 0;
 
-	debug_uart_init();
+	/* debug_uart_init(); */
 
-	log_err("Sleeping for 10s\n");
-	mdelay(10000);
+	/* printascii("test debug uart\n"); */
+	/* log_err("Sleeping for 10s\n"); */
+	/* mdelay(10000); */
 
 	uintptr_t addr = locate_coreboot_table();
 	if (!addr) {
