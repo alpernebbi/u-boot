@@ -150,7 +150,6 @@ struct cb_memory_range {
 #define CB_MEM_NVS			4
 #define CB_MEM_UNUSABLE			5
 #define CB_MEM_VENDOR_RSVD		6
-#define CB_MEM_MMIO			7
 #define CB_MEM_TABLE			16
 
 struct cb_memory {

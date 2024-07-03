@@ -243,7 +243,7 @@ int dram_init(void)
 			attrs = PTE_BLOCK_MEMTYPE(MT_NORMAL) |
 					PTE_BLOCK_INNER_SHARE;
 			break;
-		case CB_MEM_MMIO:
+		case CB_MEM_RESERVED:
 			attrs = PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
 					PTE_BLOCK_NON_SHARE |
 					PTE_BLOCK_PXN | PTE_BLOCK_UXN;
