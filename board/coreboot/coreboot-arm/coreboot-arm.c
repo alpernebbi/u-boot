@@ -126,12 +126,12 @@ int board_late_init(void)
 	 * Make sure virtio bus is enumerated so that peripherals
 	 * on the virtio bus can be discovered by their drivers
 	 */
-	/* if (CONFIG_IS_ENABLED(VIRTIO_MMIO)) */
-	/* 	virtio_init(); */
+	if (CONFIG_IS_ENABLED(VIRTIO_MMIO))
+		virtio_init();
 
 	/* start usb so that usb keyboard can be used as input device */
-	/* if (CONFIG_IS_ENABLED(USB_KEYBOARD)) */
-	/* 	usb_init(); */
+	if (CONFIG_IS_ENABLED(USB_KEYBOARD))
+		usb_init();
 
 	return 0;
 }
