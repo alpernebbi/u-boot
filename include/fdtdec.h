@@ -72,7 +72,7 @@ struct bd_info;
  *	U-Boot is packaged as an ELF file, e.g. for debugging purposes
  * @FDTSRC_ENV: Provided by the fdtcontroladdr environment variable. This should
  *	be used for debugging/development only
- * @FDTSRC_BLOBLIST: Provided by a bloblist from an earlier phase
+ * @FDTSRC_NONE: No devicetree at all
  */
 enum fdt_source_t {
 	FDTSRC_SEPARATE,
@@ -80,7 +80,6 @@ enum fdt_source_t {
 	FDTSRC_BOARD,
 	FDTSRC_EMBED,
 	FDTSRC_ENV,
-	FDTSRC_BLOBLIST,
 };
 
 /*
@@ -1191,8 +1190,7 @@ int fdtdec_resetup(int *rescan);
  *
  * The existing devicetree is available at gd->fdt_blob
  *
- * @err: 0 on success, -EEXIST if the devicetree is already correct, or other
- * internal error code if we fail to setup a DTB
+ * @err internal error code if we fail to setup a DTB
  * @returns new devicetree blob pointer
  */
 void *board_fdt_blob_setup(int *err);
