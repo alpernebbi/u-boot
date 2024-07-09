@@ -79,7 +79,6 @@ enum uclass_id {
 	UCLASS_I2C_MUX,		/* I2C multiplexer */
 	UCLASS_I2S,		/* I2S bus */
 	UCLASS_IDE,		/* IDE device */
-	UCLASS_IO_DOMAIN,	/* (SoC) IO domains */
 	UCLASS_IOMMU,		/* IOMMU */
 	UCLASS_IRQ,		/* Interrupt controller */
 	UCLASS_KEYBOARD,	/* Keyboard input device */
