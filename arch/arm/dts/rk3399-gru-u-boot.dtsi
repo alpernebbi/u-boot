@@ -28,6 +28,9 @@
 
 &edp {
 	rockchip,panel = <&edp_panel>;
+
+	/delete-property/ assigned-clocks;
+	/delete-property/ assigned-clock-rates;
 };
 
 &pp1800_audio {
