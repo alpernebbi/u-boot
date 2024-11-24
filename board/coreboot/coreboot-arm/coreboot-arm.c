@@ -331,7 +331,9 @@ long detect_coreboot_table_at(ulong start, ulong size)
 
 long locate_coreboot_table(void)
 {
-	long addr = 0xf7fd0000;
+	/* long addr = 0xf7fd0000; */
+	/* long addr = 0xbffdc000; */
+	long addr = 0xfffdc000;
 
 	log_err("Trying coreboot table at %lx.\n", addr);
 	addr = detect_coreboot_table_at(addr, 0x25000);
@@ -339,8 +341,6 @@ long locate_coreboot_table(void)
 		log_err("Found coreboot table at %#lx.\n", addr);
 		return addr;
 	}
-
-	return 0;
 
 	/* TODO: get from device-tree */
 	for (int i = 10; i < 64; i++) {
@@ -356,3 +356,6 @@ long locate_coreboot_table(void)
 	return addr;
 }
 
+void enable_caches() {
+	log_err("skip enable_caches().\n");
+}

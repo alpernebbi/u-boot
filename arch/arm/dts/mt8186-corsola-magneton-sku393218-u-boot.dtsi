@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: GPL-2.0+
+
+/ {
+        coreboot-fb {
+                bootph-some-ram;
+                compatible = "coreboot-fb";
+        };
+
+        coreboot-serial {
+                compatible = "coreboot-serial";
+        };
+
+        chosen {
+                stdout-path = "/coreboot-serial";
+        };
+};
